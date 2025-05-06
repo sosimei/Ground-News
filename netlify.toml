@@ -4,7 +4,7 @@
   command = "npm run build"  # 실제 배포 전 build 용
 
 [functions]
-  directory = "netlify/functions"
+  directory = "../netlify/functions"
 
 [[redirects]]
   from   = "/api/*"

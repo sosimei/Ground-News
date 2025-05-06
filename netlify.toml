@@ -1,6 +1,6 @@
 [build]
   base    = "client"         # ← client 폴더는 이 경로에 있습니다
-  publish = "client/dist"
+  publish = "dist"
   command = "npm run build"  # 실제 배포 전 build 용
 
 [functions]

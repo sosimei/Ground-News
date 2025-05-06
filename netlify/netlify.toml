@@ -1,0 +1,12 @@
+[build]
+  base    = "client"         # ← client 폴더는 이 경로에 있습니다
+  publish = "client/dist"
+  command = "npm run build"  # 실제 배포 전 build 용
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from   = "/api/*"
+  to     = "/.netlify/functions/:splat"
+  status = 200

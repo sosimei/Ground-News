@@ -1,0 +1,20 @@
+{
+	"geolocation": {
+		"data": {
+			"city": "Nam-gu",
+			"country": {
+				"code": "KR",
+				"name": "South Korea"
+			},
+			"subdivision": {
+				"code": "31",
+				"name": "Ulsan"
+			},
+			"timezone": "Asia/Seoul",
+			"latitude": 35.5335,
+			"longitude": 129.3173,
+			"postalCode": "446"
+		},
+		"timestamp": 1746544025778
+	}
+}

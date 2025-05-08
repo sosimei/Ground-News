@@ -4,10 +4,9 @@ exports.handler = async function(event, context) {
   try {
     const collection = await connectToDB();
     
-    // 쿼리 파라미터 파싱
-    const queryParams = event.queryStringParameters || {};
-    const limit = parseInt(queryParams.limit) || 10;
-    const page = parseInt(queryParams.page) || 1;
+    // 기본값 설정
+    const limit = parseInt(event.queryStringParameters?.limit) || 5; // 기본값을 5로 변경
+    const page = parseInt(event.queryStringParameters?.page) || 1;
     const skip = (page - 1) * limit;
 
     // 디버그 로깅
@@ -15,7 +14,10 @@ exports.handler = async function(event, context) {
     
     const clusters = await collection
       .find({})
-      .sort({ pub_date: -1 }) // 최신순으로 정렬
+      .sort({ 
+        'pub_date': -1,         // 최신순
+        'bias_ratio.total': -1  // 같은 날짜면 편향도가 높은 순
+      })
       .skip(skip)
       .limit(limit)
       .toArray();

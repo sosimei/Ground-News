@@ -1,21 +1,19 @@
-const { connectToDB, addImageUrls, respond } = require('./db-utils');
+// ... existing code ...
+  // 기본값 설정
+  const limit = parseInt(event.queryStringParameters?.limit) || 5; // 기본값을 5로 변경
+  const page = parseInt(event.queryStringParameters?.page) || 1;
+  const skip = (page - 1) * limit;
 
-exports.handler = async function(event, context) {
   try {
-    const collection = await connectToDB();
+    const collection = await getCollection('clusters');
     
-    // 쿼리 파라미터 파싱
-    const queryParams = event.queryStringParameters || {};
-    const limit = parseInt(queryParams.limit) || 10;
-    const page = parseInt(queryParams.page) || 1;
-    const skip = (page - 1) * limit;
-
-    // 디버그 로깅
-    console.log(`Fetching hot clusters with limit=${limit}, page=${page}`);
-    
+    // 핫 뉴스 조회 (편향도가 높은 순으로 정렬)
     const clusters = await collection
       .find({})
-      .sort({ 'bias_ratio.total': -1 }) // 편향도가 높은 순으로 정렬
+      .sort({ 
+        'bias_ratio.total': -1,  // 편향도가 높은 순
+        'pub_date': -1          // 같은 편향도면 최신순
+      })
       .skip(skip)
       .limit(limit)
       .toArray();
@@ -32,8 +30,4 @@ exports.handler = async function(event, context) {
         totalPages: Math.ceil(total / limit)
       }
     });
-  } catch (error) {
-    console.error('clusters-hot.js Error:', error);
-    return respond(500, { error: 'Internal Server Error', message: error.message });
-  }
-};
+// ... existing code ...

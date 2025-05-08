@@ -21,6 +21,15 @@ exports.handler = async function(event, context) {
     // 디버그 로깅
     console.log(`Fetching hot clusters for category '${category}' with limit=${limit}, page=${page}`);
     
+    // MongoDB ObjectId 형식인지 확인
+    if (category.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log(`Warning: '${category}' matches ObjectId pattern, but being treated as a category`);
+      return respond(400, { 
+        error: '잘못된 요청', 
+        message: 'ObjectId 형식의 문자열이 카테고리로 사용되었습니다. ID를 찾으려면 API 경로를 다시 확인하세요.' 
+      });
+    }
+    
     const clusters = await collection
       .find({ category })
       .sort({ 'bias_ratio.total': -1 })
@@ -28,6 +37,7 @@ exports.handler = async function(event, context) {
       .limit(limit)
       .toArray();
 
+    console.log(`Found ${clusters.length} clusters for category '${category}'`);
     const total = await collection.countDocuments({ category });
     const processedClusters = addImageUrls(clusters);
 

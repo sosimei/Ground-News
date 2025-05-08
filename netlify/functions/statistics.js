@@ -82,6 +82,8 @@ exports.handler = async function(event, context) {
       }
     }
 
+    console.log('적용된 쿼리:', JSON.stringify(query));
+
     // 에러 발생 가능성이 있는 각 집계를 try-catch로 분리
     let total = 0;
     let filteredTotal = 0;
@@ -137,20 +139,27 @@ exports.handler = async function(event, context) {
     }
 
     try {
-      // 언론사별 통계
+      // 언론사별 통계 - 수정된 부분
+      // 먼저 모든 언론사 데이터 구조를 로깅
+      const sampleDocs = await collection.find().limit(2).toArray();
+      console.log('언론사 데이터 구조 샘플:', JSON.stringify(sampleDocs.map(doc => doc.media_counts)));
+
+      // 언론사 통계 - 문서 구조에 따라 조정
       mediaStats = await collection.aggregate([
-        {
-          $unwind: "$media_counts"
+        { $match: { media_counts: { $exists: true, $ne: null } } },
+        { $project: { 
+            mediaEntries: { 
+              $objectToArray: "$media_counts" 
+            } 
+          } 
         },
-        {
-          $group: {
-            _id: "$media_counts.media",
-            count: { $sum: "$media_counts.count" }
-          }
+        { $unwind: "$mediaEntries" },
+        { $group: { 
+            _id: "$mediaEntries.k", 
+            count: { $sum: "$mediaEntries.v" } 
+          } 
         },
-        {
-          $sort: { count: -1 }
-        }
+        { $sort: { count: -1 } }
       ]).toArray();
     } catch (mediaError) {
       console.error('Media 통계 쿼리 오류:', mediaError);

@@ -103,6 +103,20 @@ async function getDetailedCategoryStats(dateFilter) {
 }
 
 exports.handler = async function(event, context) {
+  // OPTIONS 요청 처리
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Credentials': 'true'
+      },
+      body: ''
+    };
+  }
+
   try {
     await connectToDB();
 
@@ -159,7 +173,8 @@ exports.handler = async function(event, context) {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Credentials': 'true'
       },
       body: JSON.stringify({
         isSuccess: true,

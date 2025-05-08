@@ -7,14 +7,10 @@ exports.handler = async function(event, context) {
       return respond(200, {});
     }
 
-    // 경로 패턴에서 ID 추출
-    const path = event.path || '';
-    const pathSegments = path
-      .split('/')
-      .filter(segment => segment !== '' && segment !== '.netlify' && segment !== 'functions');
+    // 경로에서 ID 파라미터 추출
+    const pathParts = event.path.split('/');
+    const id = pathParts[pathParts.length - 1];
 
-    // ID 파라미터 확인
-    const id = pathSegments[pathSegments.length - 1];
     if (!id) {
       return respond(400, formatErrorResponse('ID parameter is required', 'ERROR400'));
     }

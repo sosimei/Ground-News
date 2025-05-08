@@ -135,29 +135,45 @@ exports.handler = async function(event, context) {
       // 두 번째 세그먼트가 ObjectId 형식인지 확인
       const isObjectId = pathSegments[1].match(/^[0-9a-fA-F]{24}$/);
       
-      // ObjectId가 아니면 카테고리로 간주
-      if (!isObjectId) {
-        const category = pathSegments[1];
-        const clusters = await collection
-          .find({ category })
-          .sort({ 'bias_ratio.total': -1 })
-          .skip(skip)
-          .limit(limit)
-          .toArray();
-
-        const total = await collection.countDocuments({ category });
-        const processedClusters = addImageUrls(clusters);
-
-        return respond(200, {
-          clusters: processedClusters,
-          pagination: {
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit)
+      // ObjectId이면 ID로 간주
+      if (isObjectId) {
+        const id = pathSegments[1];
+        try {
+          const cluster = await collection.findOne({ _id: new ObjectId(id) });
+          
+          if (!cluster) {
+            return respond(404, { error: '뉴스를 찾을 수 없습니다.' });
           }
-        });
+
+          const processedCluster = addImageUrls(cluster, true);
+          return respond(200, processedCluster);
+        } catch (error) {
+          console.error('Error fetching hot cluster detail:', error);
+          return respond(500, { error: '서버 오류가 발생했습니다.' });
+        }
       }
+      
+      // ObjectId가 아니면 카테고리로 간주
+      const category = pathSegments[1];
+      const clusters = await collection
+        .find({ category })
+        .sort({ 'bias_ratio.total': -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      const total = await collection.countDocuments({ category });
+      const processedClusters = addImageUrls(clusters);
+
+      return respond(200, {
+        clusters: processedClusters,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      });
     }
 
     // 4. 카테고리 별 최근 뉴스 preview 가져오기: /clusters/latest/{category}
@@ -165,29 +181,45 @@ exports.handler = async function(event, context) {
       // 두 번째 세그먼트가 ObjectId 형식인지 확인
       const isObjectId = pathSegments[1].match(/^[0-9a-fA-F]{24}$/);
       
-      // ObjectId가 아니면 카테고리로 간주
-      if (!isObjectId) {
-        const category = pathSegments[1];
-        const clusters = await collection
-          .find({ category })
-          .sort({ pub_date: -1 })
-          .skip(skip)
-          .limit(limit)
-          .toArray();
-
-        const total = await collection.countDocuments({ category });
-        const processedClusters = addImageUrls(clusters);
-
-        return respond(200, {
-          clusters: processedClusters,
-          pagination: {
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit)
+      // ObjectId이면 ID로 간주
+      if (isObjectId) {
+        const id = pathSegments[1];
+        try {
+          const cluster = await collection.findOne({ _id: new ObjectId(id) });
+          
+          if (!cluster) {
+            return respond(404, { error: '뉴스를 찾을 수 없습니다.' });
           }
-        });
+
+          const processedCluster = addImageUrls(cluster, true);
+          return respond(200, processedCluster);
+        } catch (error) {
+          console.error('Error fetching latest cluster detail:', error);
+          return respond(500, { error: '서버 오류가 발생했습니다.' });
+        }
       }
+      
+      // ObjectId가 아니면 카테고리로 간주
+      const category = pathSegments[1];
+      const clusters = await collection
+        .find({ category })
+        .sort({ pub_date: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      const total = await collection.countDocuments({ category });
+      const processedClusters = addImageUrls(clusters);
+
+      return respond(200, {
+        clusters: processedClusters,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      });
     }
 
     // 5. 디테일 핫 뉴스 가져오기: /clusters/hot/{id}

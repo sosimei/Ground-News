@@ -1,152 +1,121 @@
-const express = require('express');
-const router = express.Router();
 const { MongoClient } = require('mongodb');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-// MongoDB 연결
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
+let client;
+let collection;
 
-// 바이어스 통계 가져오기
-router.get('/bias', async (req, res) => {
-  try {
+async function connectToDB() {
+  if (!client) {
+    client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
-    const collection = client.db('news_db').collection('clusters');
-    
-    const { dateFrom, dateTo } = req.query;
-    const query = {};
+    const db = client.db('news_bias');
+    collection = db.collection('clusters');
+  }
+}
+
+exports.handler = async function(event, context) {
+  try {
+    await connectToDB();
+
+    // 기본 통계
+    const total = await collection.countDocuments();
+
+    // 바이어스 통계
+    const biasStats = await collection.aggregate([
+      {
+        $group: {
+          _id: null,
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      }
+    ]).toArray();
+
+    // 언론사별 통계
+    const mediaStats = await collection.aggregate([
+      {
+        $unwind: "$media_counts"
+      },
+      {
+        $group: {
+          _id: "$media_counts.media",
+          count: { $sum: "$media_counts.count" }
+        }
+      }
+    ]).toArray();
+
+    // 카테고리별 통계
+    const categoryStats = await collection.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 }
+        }
+      }
+    ]).toArray();
+
+    // 날짜 필터 적용
+    const { dateFrom, dateTo } = event.queryStringParameters || {};
+    let dateFilter = {};
     
     if (dateFrom || dateTo) {
-      query.crawl_date = {};
-      if (dateFrom) query.crawl_date.$gte = new Date(dateFrom);
-      if (dateTo) query.crawl_date.$lte = new Date(dateTo);
+      dateFilter.crawl_date = {};
+      if (dateFrom) dateFilter.crawl_date.$gte = new Date(dateFrom);
+      if (dateTo) dateFilter.crawl_date.$lte = new Date(dateTo);
     }
-    
-    const clusters = await collection.find(query).toArray();
-    
-    // 바이어스 비율 계산
-    const totalClusters = clusters.length;
-    const biasStats = clusters.reduce((acc, cluster) => {
-      acc.left += cluster.bias_ratio.left;
-      acc.center += cluster.bias_ratio.center;
-      acc.right += cluster.bias_ratio.right;
-      return acc;
-    }, { left: 0, center: 0, right: 0 });
-    
-    // 평균 계산
-    const result = {
-      left: biasStats.left / totalClusters,
-      center: biasStats.center / totalClusters,
-      right: biasStats.right / totalClusters
+
+    // 필터링된 통계
+    const filteredTotal = await collection.countDocuments(dateFilter);
+    const filteredBiasStats = await collection.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: null,
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      }
+    ]).toArray();
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
+      body: JSON.stringify({
+        total,
+        biasStats: biasStats[0] || { left: 0, center: 0, right: 0 },
+        mediaStats: mediaStats.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {}),
+        categoryStats: categoryStats.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {}),
+        filtered: {
+          total: filteredTotal,
+          biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0 }
+        }
+      })
     };
-    
-    res.json(result);
   } catch (error) {
-    console.error('Error fetching bias statistics:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-// 언론사별 통계 가져오기
-router.get('/media', async (req, res) => {
-  try {
-    await client.connect();
-    const collection = client.db('news_db').collection('clusters');
-    
-    const { dateFrom, dateTo } = req.query;
-    const query = {};
-    
-    if (dateFrom || dateTo) {
-      query.crawl_date = {};
-      if (dateFrom) query.crawl_date.$gte = new Date(dateFrom);
-      if (dateTo) query.crawl_date.$lte = new Date(dateTo);
-    }
-    
-    const clusters = await collection.find(query).toArray();
-    
-    // 언론사별 기사 수 계산
-    const mediaCounts = clusters.reduce((acc, cluster) => {
-      Object.entries(cluster.media_counts).forEach(([media, count]) => {
-        acc[media] = (acc[media] || 0) + count;
-      });
-      return acc;
-    }, {});
-    
-    res.json({ mediaCounts });
-  } catch (error) {
-    console.error('Error fetching media statistics:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-// 카테고리별 통계 가져오기
-router.get('/category', async (req, res) => {
-  try {
-    await client.connect();
-    const collection = client.db('news_db').collection('clusters');
-    
-    const { dateFrom, dateTo } = req.query;
-    const query = {};
-    
-    if (dateFrom || dateTo) {
-      query.crawl_date = {};
-      if (dateFrom) query.crawl_date.$gte = new Date(dateFrom);
-      if (dateTo) query.crawl_date.$lte = new Date(dateTo);
-    }
-    
-    const clusters = await collection.find(query).toArray();
-    
-    // 카테고리별 클러스터 수 계산
-    const categoryCounts = clusters.reduce((acc, cluster) => {
-      const category = cluster.category || '기타';
-      acc[category] = (acc[category] || 0) + 1;
-      return acc;
-    }, {});
-    
-    res.json({ categoryCounts });
-  } catch (error) {
-    console.error('Error fetching category statistics:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-// 전체 통계 가져오기
-router.get('/', async (req, res) => {
-  try {
-    await client.connect();
-    const collection = client.db('news_db').collection('clusters');
-    
-    const totalClusters = await collection.countDocuments();
-    
-    // 전체 기사 수 계산
-    const clusters = await collection.find().toArray();
-    const totalArticles = clusters.reduce((acc, cluster) => {
-      return acc + Object.values(cluster.media_counts).reduce((sum, count) => sum + count, 0);
-    }, 0);
-    
-    // 평균 바이어스 계산
-    const biasStats = clusters.reduce((acc, cluster) => {
-      acc.left += cluster.bias_ratio.left;
-      acc.center += cluster.bias_ratio.center;
-      acc.right += cluster.bias_ratio.right;
-      return acc;
-    }, { left: 0, center: 0, right: 0 });
-    
-    const averageBias = {
-      left: biasStats.left / totalClusters,
-      center: biasStats.center / totalClusters,
-      right: biasStats.right / totalClusters
+    console.error('statistics.js Error:', error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
+      body: JSON.stringify({ error: 'Internal Server Error' })
     };
-    
-    res.json({
-      totalClusters,
-      totalArticles,
-      averageBias
-    });
-  } catch (error) {
-    console.error('Error fetching overall statistics:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
   }
-});
-
-module.exports = router; 
+};

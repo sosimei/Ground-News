@@ -1,4 +1,4 @@
-const { connectToDB, addImageUrls, respond, getPaginationData, formatResponse } = require('./db-utils');
+const { connectToDB, addImageUrls, respond, getPaginationData, formatListResponse, formatErrorResponse } = require('./db-utils');
 
 exports.handler = async function(event, context) {
   try {
@@ -10,8 +10,8 @@ exports.handler = async function(event, context) {
     // 데이터베이스 연결
     const collection = await connectToDB();
     
-    // 페이지네이션 데이터 가져오기
-    const { limit, page, skip, paginationData } = getPaginationData(event);
+    // 페이지네이션 데이터 가져오기 (기본값 5개씩)
+    const { limit, page, skip, paginationData } = getPaginationData(event, 5);
 
     // 핫 뉴스 조회 (편향도가 높은 순으로 정렬)
     const clusters = await collection
@@ -52,16 +52,14 @@ exports.handler = async function(event, context) {
     const processedClusters = addImageUrls(clusters);
 
     // 응답 형식화
-    return respond(200, {
-      clusters: processedClusters,
-      pagination: {
-        ...paginationData,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
+    const response = formatListResponse(processedClusters, {
+      ...paginationData,
+      total
     });
+
+    return respond(200, response);
   } catch (error) {
     console.error('clusters-hot.js Error:', error);
-    return respond(500, { error: 'Internal Server Error', message: error.message });
+    return respond(500, formatErrorResponse('Internal Server Error', 'ERROR500'));
   }
 };

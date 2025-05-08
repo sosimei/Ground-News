@@ -6,19 +6,10 @@
 [functions]
   directory = "../netlify/functions"
 
-# 특정 API 경로를 특정 함수로 리디렉션
+# ID는 일반적으로 24자리 16진수이며, 카테고리는 그렇지 않습니다.
+# ID 패턴에 대한 리디렉션을 먼저 정의합니다.
 [[redirects]]
-  from = "/api/clusters/hot"
-  to = "/.netlify/functions/clusters-hot"
-  status = 200
-
-[[redirects]]
-  from = "/api/clusters/latest"
-  to = "/.netlify/functions/clusters-latest"
-  status = 200
-
-[[redirects]]
-  from = "/api/clusters/hot/:id"
+  from = "/api/clusters/hot/:id(^[0-9a-fA-F]{24}$)"
   to = "/.netlify/functions/clusters-hot-id"
   status = 200
   force = true
@@ -26,13 +17,14 @@
     id = ":id"
 
 [[redirects]]
-  from = "/api/clusters/latest/:id"
+  from = "/api/clusters/latest/:id(^[0-9a-fA-F]{24}$)"
   to = "/.netlify/functions/clusters-latest-id"
   status = 200
   force = true
   [redirects.query]
     id = ":id"
 
+# 카테고리 리디렉션을 그 다음에 정의합니다.
 [[redirects]]
   from = "/api/clusters/hot/:category"
   to = "/.netlify/functions/clusters-hot-category"
@@ -48,6 +40,17 @@
   force = true
   [redirects.query]
     category = ":category"
+
+# 기본 API 엔드포인트
+[[redirects]]
+  from = "/api/clusters/hot"
+  to = "/.netlify/functions/clusters-hot"
+  status = 200
+
+[[redirects]]
+  from = "/api/clusters/latest"
+  to = "/.netlify/functions/clusters-latest"
+  status = 200
 
 # 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
 [[redirects]]

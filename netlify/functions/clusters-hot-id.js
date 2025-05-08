@@ -1,4 +1,4 @@
-const { connectToDB, addImageUrls, respond, ObjectId } = require('./db-utils');
+const { connectToDB, addImageUrls, respond, ObjectId, formatDetailResponse, formatErrorResponse } = require('./db-utils');
 
 exports.handler = async function(event, context) {
   try {
@@ -16,12 +16,12 @@ exports.handler = async function(event, context) {
     // ID 파라미터 확인
     const id = pathSegments[pathSegments.length - 1];
     if (!id) {
-      return respond(400, { error: 'ID parameter is required' });
+      return respond(400, formatErrorResponse('ID parameter is required', 'ERROR400'));
     }
 
     // 유효한 ObjectId 형식인지 확인
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-      return respond(400, { error: 'Invalid ID format' });
+      return respond(400, formatErrorResponse('Invalid ID format', 'ERROR400'));
     }
 
     // 데이터베이스 연결
@@ -31,16 +31,17 @@ exports.handler = async function(event, context) {
     const cluster = await collection.findOne({ _id: new ObjectId(id) });
     
     if (!cluster) {
-      return respond(404, { error: 'News not found' });
+      return respond(404, formatErrorResponse('News not found', 'ERROR404'));
     }
 
     // 이미지 URL 추가
     const processedCluster = addImageUrls(cluster, true);
 
     // 응답
-    return respond(200, processedCluster);
+    const response = formatDetailResponse(processedCluster);
+    return respond(200, response);
   } catch (error) {
     console.error('clusters-hot-id.js Error:', error);
-    return respond(500, { error: 'Internal Server Error', message: error.message });
+    return respond(500, formatErrorResponse('Internal Server Error', 'ERROR500'));
   }
 };

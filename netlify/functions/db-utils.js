@@ -68,8 +68,8 @@ const respond = (statusCode, body) => ({
 });
 
 // 공통 페이지네이션 함수
-const getPaginationData = (event) => {
-  const limit = parseInt(event.queryStringParameters?.limit) || 10;
+const getPaginationData = (event, defaultLimit = 10) => {
+  const limit = parseInt(event.queryStringParameters?.limit) || defaultLimit;
   const page = parseInt(event.queryStringParameters?.page) || 1;
   const skip = (page - 1) * limit;
   
@@ -81,11 +81,41 @@ const getPaginationData = (event) => {
   };
 };
 
-// API 응답 형식화 함수
-const formatResponse = (clusters, pagination) => {
+// API 응답 형식화 함수 (목록)
+const formatListResponse = (clusters, pagination) => {
   return {
-    clusters,
-    pagination
+    isSuccess: true,
+    code: "COMMON200",
+    message: "성공!",
+    result: {
+      clusters,
+      pagination: {
+        total: pagination.total,
+        page: pagination.page,
+        limit: pagination.limit,
+        pages: Math.ceil(pagination.total / pagination.limit)
+      }
+    }
+  };
+};
+
+// API 응답 형식화 함수 (상세)
+const formatDetailResponse = (cluster) => {
+  return {
+    isSuccess: true,
+    code: 200,
+    message: "성공",
+    result: cluster
+  };
+};
+
+// 오류 응답 형식화 함수
+const formatErrorResponse = (errorMessage, errorCode = "ERROR400") => {
+  return {
+    isSuccess: false,
+    code: errorCode,
+    message: errorMessage,
+    result: null
   };
 };
 
@@ -95,5 +125,7 @@ module.exports = {
   respond,
   ObjectId,
   getPaginationData,
-  formatResponse
+  formatListResponse,
+  formatDetailResponse,
+  formatErrorResponse
 };

@@ -7,14 +7,10 @@ exports.handler = async function(event, context) {
       return respond(200, {});
     }
 
-    // 경로 패턴에서 카테고리 추출
-    const path = event.path || '';
-    const pathSegments = path
-      .split('/')
-      .filter(segment => segment !== '' && segment !== '.netlify' && segment !== 'functions');
+    // 경로에서 카테고리 파라미터 추출
+    const pathParts = event.path.split('/');
+    const category = pathParts[pathParts.length - 1];
 
-    // 카테고리 파라미터 확인
-    const category = pathSegments[pathSegments.length - 1];
     if (!category) {
       return respond(400, formatErrorResponse('Category parameter is required', 'ERROR400'));
     }

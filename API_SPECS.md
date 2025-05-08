@@ -8,39 +8,44 @@
 
 ```json
 {
-  "clusters": [
-    {
-      // 뉴스 클러스터 객체
-      "_id": "ObjectId",
-      "cluster_id": "String",
-      "title": "String",
-      "crawl_date": "String",
-      "bias_ratio": {
-        "left": Number,
-        "center": Number,
-        "right": Number
+  "isSuccess": true,
+  "code": "COMMON200",
+  "message": "성공!",
+  "result": {
+    "clusters": [
+      {
+        // 뉴스 클러스터 객체
+        "_id": "ObjectId",
+        "cluster_id": "String",
+        "title": "String",
+        "crawl_date": "String",
+        "bias_ratio": {
+          "left": Number,
+          "center": Number,
+          "right": Number
+        },
+        "left": {
+          "summary": "String",
+          "keywords": Array,
+          "press_list": Array,
+          // 기타 왼쪽 관점 데이터
+        },
+        "center": {
+          // 중도 관점 데이터
+        },
+        "right": {
+          // 우측 관점 데이터
+        },
+        // 기타 메타데이터
       },
-      "left": {
-        "summary": "String",
-        "keywords": Array,
-        "press_list": Array,
-        // 기타 왼쪽 관점 데이터
-      },
-      "center": {
-        // 중도 관점 데이터
-      },
-      "right": {
-        // 우측 관점 데이터
-      },
-      // 기타 메타데이터
-    },
-    // 추가 뉴스 클러스터 객체들...
-  ],
-  "pagination": {
-    "page": Number,
-    "limit": Number,
-    "total": Number,
-    "totalPages": Number
+      // 추가 뉴스 클러스터 객체들...
+    ],
+    "pagination": {
+      "page": Number,
+      "limit": Number,
+      "total": Number,
+      "pages": Number
+    }
   }
 }
 ```
@@ -49,39 +54,54 @@
 
 ```json
 {
-  "_id": "ObjectId",
-  "cluster_id": "String",
-  "title": "String",
-  "crawl_date": "String",
-  "bias_ratio": {
-    "left": Number,
-    "center": Number,
-    "right": Number
-  },
-  "left": {
-    "summary": "String",
-    "keywords": Array,
-    "press_list": Array,
-    "left_article_ids": Array,
-    "left_article_urls": Array
-  },
-  "center": {
-    "summary": "String",
-    "keywords": Array,
-    "press_list": Array,
-    "center_article_ids": Array,
-    "center_article_urls": Array
-  },
-  "right": {
-    "summary": "String",
-    "keywords": Array,
-    "press_list": Array,
-    "right_article_ids": Array,
-    "right_article_urls": Array
-  },
-  "media_counts": Object,
-  "created_at": Date,
-  "updated_at": Date
+  "isSuccess": true,
+  "code": 200,
+  "message": "성공",
+  "result": {
+    "title": "<string, ≤120자>",
+    "pub_date": "<YYYY-MM-DD>",
+    "article_ids": ["<ObjectIdString>", ...],
+    "article_urls": ["<https://…>", ...],
+    "bias_ratio": {
+      "left": 0.10,
+      "center": 0.50,
+      "right": 0.40
+    },
+    "left": {
+      "summary": "<3문장 요약>",
+      "keywords": [
+        { "word": "<string>", "score": <1-10> },
+        ...
+      ],
+      "press_list": ["<pressCode>", ...],
+      "article_ids": ["<ObjectIdString>", ...],
+      "article_urls": ["<https://…>", ...]
+    },
+    "center": {
+      "summary": "<3문장 요약>",
+      "keywords": [
+        { "word": "<string>", "score": <1-10> },
+        ...
+      ],
+      "press_list": ["<pressCode>", ...],
+      "article_ids": ["<ObjectIdString>", ...],
+      "article_urls": ["<https://…>", ...]
+    },
+    "right": {
+      "summary": "<3문장 요약>",
+      "keywords": [
+        { "word": "<string>", "score": <1-10> },
+        ...
+      ],
+      "press_list": ["<pressCode>", ...],
+      "article_ids": ["<ObjectIdString>", ...],
+      "article_urls": ["<https://…>", ...]
+    },
+    "media_counts": { "<pressCode>": <int>, ... },
+    "created_at": "<ISO8601 UTC>",
+    "updated_at": "<ISO8601 UTC>",
+    "model_ver": "<string>"
+  }
 }
 ```
 
@@ -93,7 +113,7 @@
 - URL: `/clusters/hot`
 - Method: `GET`
 - Query Parameters:
-  - `limit` (Integer, Optional, 기본값=10): 페이지당 결과 수
+  - `limit` (Integer, Optional, 기본값=5): 페이지당 결과 수
   - `page` (Integer, Optional, 기본값=1): 페이지 번호
 
 **응답:**
@@ -105,7 +125,7 @@
 - URL: `/clusters/latest`
 - Method: `GET`
 - Query Parameters:
-  - `limit` (Integer, Optional, 기본값=10): 페이지당 결과 수
+  - `limit` (Integer, Optional, 기본값=5): 페이지당 결과 수
   - `page` (Integer, Optional, 기본값=1): 페이지 번호
 
 **응답:**
@@ -119,7 +139,7 @@
 - URL Parameters:
   - `category` (String, Required): 뉴스 카테고리
 - Query Parameters:
-  - `limit` (Integer, Optional, 기본값=10): 페이지당 결과 수
+  - `limit` (Integer, Optional, 기본값=20): 페이지당 결과 수
   - `page` (Integer, Optional, 기본값=1): 페이지 번호
 
 **응답:**
@@ -133,7 +153,7 @@
 - URL Parameters:
   - `category` (String, Required): 뉴스 카테고리
 - Query Parameters:
-  - `limit` (Integer, Optional, 기본값=10): 페이지당 결과 수
+  - `limit` (Integer, Optional, 기본값=20): 페이지당 결과 수
   - `page` (Integer, Optional, 기본값=1): 페이지 번호
 
 **응답:**
@@ -169,11 +189,13 @@
 
 ```json
 {
-  "error": "Error message",
-  "message": "Detailed error message or description"
+  "isSuccess": false,
+  "code": "ERROR400",  // 혹은 오류 코드에 따라 다름
+  "message": "Error message",
+  "result": null
 }
 ```
 
-- 400: 잘못된 요청 (파라미터 오류 등)
-- 404: 리소스를 찾을 수 없음
-- 500: 서버 내부 오류
+- ERROR400: 잘못된 요청 (파라미터 오류 등)
+- ERROR404: 리소스를 찾을 수 없음
+- ERROR500: 서버 내부 오류

@@ -67,9 +67,33 @@ const respond = (statusCode, body) => ({
   body: JSON.stringify(body)
 });
 
+// 공통 페이지네이션 함수
+const getPaginationData = (event) => {
+  const limit = parseInt(event.queryStringParameters?.limit) || 10;
+  const page = parseInt(event.queryStringParameters?.page) || 1;
+  const skip = (page - 1) * limit;
+  
+  return {
+    limit,
+    page,
+    skip,
+    paginationData: { page, limit }
+  };
+};
+
+// API 응답 형식화 함수
+const formatResponse = (clusters, pagination) => {
+  return {
+    clusters,
+    pagination
+  };
+};
+
 module.exports = {
   connectToDB,
   addImageUrls,
   respond,
-  ObjectId
+  ObjectId,
+  getPaginationData,
+  formatResponse
 };

@@ -6,8 +6,8 @@
 [functions]
   directory = "../netlify/functions"
 
-# ID는 일반적으로 24자리 16진수이며, 카테고리는 그렇지 않습니다.
-# ID 패턴에 대한 리디렉션을 먼저 정의합니다.
+# 가장 구체적인 경로부터 배치합니다
+# 1. 특정 ID 패턴 (24자리 16진수)에 대한 리디렉션
 [[redirects]]
   from = "/api/clusters/hot/:id(^[0-9a-fA-F]{24}$)"
   to = "/.netlify/functions/clusters-hot-id"
@@ -24,7 +24,7 @@
   [redirects.query]
     id = ":id"
 
-# 카테고리 리디렉션을 그 다음에 정의합니다.
+# 2. 카테고리 패턴에 대한 리디렉션
 [[redirects]]
   from = "/api/clusters/hot/:category"
   to = "/.netlify/functions/clusters-hot-category"
@@ -41,7 +41,7 @@
   [redirects.query]
     category = ":category"
 
-# 기본 API 엔드포인트
+# 3. 기본 API 엔드포인트
 [[redirects]]
   from = "/api/clusters/hot"
   to = "/.netlify/functions/clusters-hot"
@@ -52,13 +52,48 @@
   to = "/.netlify/functions/clusters-latest"
   status = 200
 
-# 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
+# 4. 통계 API
+[[redirects]]
+  from = "/api/statistics"
+  to = "/.netlify/functions/statistics"
+  status = 200
+
+# 5. additional.js 파일이 처리하는 API 경로들
+[[redirects]]
+  from = "/api/dates"
+  to = "/.netlify/functions/additional"
+  status = 200
+  [redirects.query]
+    path = "dates"
+
+[[redirects]]
+  from = "/api/categories"
+  to = "/.netlify/functions/additional"
+  status = 200
+  [redirects.query]
+    path = "categories"
+
+[[redirects]]
+  from = "/api/search"
+  to = "/.netlify/functions/additional"
+  status = 200
+  [redirects.query]
+    path = "search"
+
+[[redirects]]
+  from = "/api/trending"
+  to = "/.netlify/functions/additional"
+  status = 200
+  [redirects.query]
+    path = "trending"
+
+# 6. 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-# SPA를 위한 리디렉션
+# 7. SPA를 위한 리디렉션
 [[redirects]]
   from = "/*"
   to = "/index.html"

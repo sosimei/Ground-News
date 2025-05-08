@@ -1,55 +1,47 @@
-const { connectToDB, addImageUrls, respond } = require('./db-utils');
+const { connectToDB, addImageUrls, respond, getPaginationData, formatResponse } = require('./db-utils');
 
 exports.handler = async function(event, context) {
   try {
+    // CORS 프리플라이트 요청 처리
+    if (event.httpMethod === 'OPTIONS') {
+      return respond(200, {});
+    }
+
+    // 경로 패턴에서 카테고리 추출
+    const path = event.path || '';
+    const pathSegments = path
+      .split('/')
+      .filter(segment => segment !== '' && segment !== '.netlify' && segment !== 'functions');
+
+    // 카테고리 파라미터 확인
+    const category = pathSegments[pathSegments.length - 1];
+    if (!category) {
+      return respond(400, { error: 'Category parameter is required' });
+    }
+
+    // 데이터베이스 연결
     const collection = await connectToDB();
     
-    // 쿼리 파라미터 파싱
-    const queryParams = event.queryStringParameters || {};
-    const limit = parseInt(queryParams.limit) || 20;
-    const page = parseInt(queryParams.page) || 1;
-    const skip = (page - 1) * limit;
+    // 페이지네이션 데이터 가져오기
+    const { limit, page, skip, paginationData } = getPaginationData(event);
 
-    // 경로에서 카테고리 추출
-    const path = event.path || '';
-    const pathParts = path.split('/');
-    let category = pathParts[pathParts.length - 1];
-    
-    // URL 디코딩
-    category = decodeURIComponent(category);
-    
-    // 디버그 로깅
-    console.log(`Fetching latest clusters for category '${category}' with limit=${limit}, page=${page}`);
-    
-    // MongoDB ObjectId 형식인지 확인
-    if (category.match(/^[0-9a-fA-F]{24}$/)) {
-      console.log(`Warning: '${category}' matches ObjectId pattern, but being treated as a category`);
-      return respond(400, { 
-        error: '잘못된 요청', 
-        message: 'ObjectId 형식의 문자열이 카테고리로 사용되었습니다. ID를 찾으려면 API 경로를 다시 확인하세요.' 
-      });
-    }
-    
+    // 카테고리별 최신 뉴스 조회
     const clusters = await collection
       .find({ category })
-      .sort({ 
-        'pub_date': -1,         // 최신순
-        'bias_ratio.total': -1  // 같은 날짜면 편향도가 높은 순
-      })
+      .sort({ pub_date: -1 })  // 최신순
       .skip(skip)
       .limit(limit)
       .toArray();
 
-    console.log(`Found ${clusters.length} clusters for category '${category}'`);
     const total = await collection.countDocuments({ category });
     const processedClusters = addImageUrls(clusters);
 
+    // 응답 형식화
     return respond(200, {
       clusters: processedClusters,
       pagination: {
+        ...paginationData,
         total,
-        page,
-        limit,
         totalPages: Math.ceil(total / limit)
       }
     });

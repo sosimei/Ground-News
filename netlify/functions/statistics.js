@@ -39,13 +39,7 @@ exports.handler = async function(event, context) {
           _id: null,
           left: { $avg: "$bias_ratio.left" },
           center: { $avg: "$bias_ratio.center" },
-          right: { $avg: "$bias_ratio.right" },
-          maxLeft: { $max: "$bias_ratio.left" },
-          maxCenter: { $max: "$bias_ratio.center" },
-          maxRight: { $max: "$bias_ratio.right" },
-          minLeft: { $min: "$bias_ratio.left" },
-          minCenter: { $min: "$bias_ratio.center" },
-          minRight: { $min: "$bias_ratio.right" }
+          right: { $avg: "$bias_ratio.right" }
         }
       }
     ]).toArray();
@@ -58,13 +52,7 @@ exports.handler = async function(event, context) {
           _id: null,
           left: { $avg: "$bias_ratio.left" },
           center: { $avg: "$bias_ratio.center" },
-          right: { $avg: "$bias_ratio.right" },
-          maxLeft: { $max: "$bias_ratio.left" },
-          maxCenter: { $max: "$bias_ratio.center" },
-          maxRight: { $max: "$bias_ratio.right" },
-          minLeft: { $min: "$bias_ratio.left" },
-          minCenter: { $min: "$bias_ratio.center" },
-          minRight: { $min: "$bias_ratio.right" }
+          right: { $avg: "$bias_ratio.right" }
         }
       }
     ]).toArray();
@@ -167,53 +155,11 @@ exports.handler = async function(event, context) {
         'Access-Control-Allow-Headers': 'Content-Type'
       },
       body: JSON.stringify({
-        total,
-        biasStats: biasStats[0] || { 
-          left: 0, center: 0, right: 0,
-          maxLeft: 0, maxCenter: 0, maxRight: 0,
-          minLeft: 0, minCenter: 0, minRight: 0
-        },
-        mediaStats: mediaStats.reduce((acc, curr) => {
-          acc[curr._id] = {
-            count: curr.count,
-            bias: {
-              left: curr.leftBias,
-              center: curr.centerBias,
-              right: curr.rightBias
-            }
-          };
-          return acc;
-        }, {}),
-        categoryStats: categoryStats.reduce((acc, curr) => {
-          acc[curr._id] = {
-            count: curr.count,
-            bias: {
-              left: curr.leftBias,
-              center: curr.centerBias,
-              right: curr.rightBias
-            }
-          };
-          return acc;
-        }, {}),
-        dailyStats: dailyStats.reduce((acc, curr) => {
-          acc[curr._id] = {
-            count: curr.count,
-            bias: {
-              left: curr.leftBias,
-              center: curr.centerBias,
-              right: curr.rightBias
-            }
-          };
-          return acc;
-        }, {}),
-        filtered: {
-          total: filteredTotal,
-          biasStats: filteredBiasStats[0] || { 
-            left: 0, center: 0, right: 0,
-            maxLeft: 0, maxCenter: 0, maxRight: 0,
-            minLeft: 0, minCenter: 0, minRight: 0
-          },
-          mediaStats: filteredMediaStats.reduce((acc, curr) => {
+        isSuccess: true,
+        result: {
+          total,
+          biasStats: biasStats[0] || { left: 0, center: 0, right: 0 },
+          mediaStats: mediaStats.reduce((acc, curr) => {
             acc[curr._id] = {
               count: curr.count,
               bias: {
@@ -224,7 +170,7 @@ exports.handler = async function(event, context) {
             };
             return acc;
           }, {}),
-          categoryStats: filteredCategoryStats.reduce((acc, curr) => {
+          categoryStats: categoryStats.reduce((acc, curr) => {
             acc[curr._id] = {
               count: curr.count,
               bias: {
@@ -235,7 +181,7 @@ exports.handler = async function(event, context) {
             };
             return acc;
           }, {}),
-          dailyStats: filteredDailyStats.reduce((acc, curr) => {
+          dailyStats: dailyStats.reduce((acc, curr) => {
             acc[curr._id] = {
               count: curr.count,
               bias: {
@@ -245,7 +191,44 @@ exports.handler = async function(event, context) {
               }
             };
             return acc;
-          }, {})
+          }, {}),
+          filtered: {
+            total: filteredTotal,
+            biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0 },
+            mediaStats: filteredMediaStats.reduce((acc, curr) => {
+              acc[curr._id] = {
+                count: curr.count,
+                bias: {
+                  left: curr.leftBias,
+                  center: curr.centerBias,
+                  right: curr.rightBias
+                }
+              };
+              return acc;
+            }, {}),
+            categoryStats: filteredCategoryStats.reduce((acc, curr) => {
+              acc[curr._id] = {
+                count: curr.count,
+                bias: {
+                  left: curr.leftBias,
+                  center: curr.centerBias,
+                  right: curr.rightBias
+                }
+              };
+              return acc;
+            }, {}),
+            dailyStats: filteredDailyStats.reduce((acc, curr) => {
+              acc[curr._id] = {
+                count: curr.count,
+                bias: {
+                  left: curr.leftBias,
+                  center: curr.centerBias,
+                  right: curr.rightBias
+                }
+              };
+              return acc;
+            }, {})
+          }
         }
       })
     };
@@ -259,7 +242,10 @@ exports.handler = async function(event, context) {
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type'
       },
-      body: JSON.stringify({ error: 'Internal Server Error' })
+      body: JSON.stringify({
+        isSuccess: false,
+        message: 'Internal Server Error'
+      })
     };
   }
 };

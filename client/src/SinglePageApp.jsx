@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
+import apiService from './utils/api';
 
 function App() {
   const [clusters, setClusters] = useState([]);
@@ -37,18 +38,12 @@ function App() {
   // 날짜 및 카테고리 목록 가져오기
   useEffect(() => {
     // 날짜 목록 가져오기
-    fetch('http://localhost:3001/api/dates')
+    apiService.statistics.getDates()
       .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('날짜 데이터 로드 성공:', data);
-        setDates(data);
-        if (data.length > 0) {
-          setSelectedDate(data[0]);
+        console.log('날짜 데이터 로드 성공:', response.data);
+        setDates(response.data.dates || []);
+        if (response.data.dates && response.data.dates.length > 0) {
+          setSelectedDate(response.data.dates[0]);
         }
       })
       .catch(error => {
@@ -57,16 +52,10 @@ function App() {
       });
       
     // 카테고리 목록 가져오기
-    fetch('http://localhost:3001/api/categories')
+    apiService.statistics.getCategories()
       .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('카테고리 데이터 로드 성공:', data);
-        setCategories(data);
+        console.log('카테고리 데이터 로드 성공:', response.data);
+        setCategories(response.data.categories || []);
       })
       .catch(error => {
         console.error('Error fetching categories:', error);
@@ -78,34 +67,33 @@ function App() {
     if (selectedDate) {
       setLoading(true);
       
-      const skip = (page - 1) * itemsPerPage;
-      let url;
+      const params = {
+        limit: itemsPerPage,
+        page: page,
+        date: selectedDate
+      };
       
-      // 검색 중이면 검색 API 사용, 아니면 기본 클러스터 API 사용
-      if (isSearching && searchQuery.trim()) {
-        url = `http://localhost:3001/api/search?query=${encodeURIComponent(searchQuery)}&date=${selectedDate}&limit=${itemsPerPage}&skip=${skip}`;
-        if (selectedCategory) {
-          url += `&category=${encodeURIComponent(selectedCategory)}`;
-        }
-      } else {
-        url = `http://localhost:3001/api/clusters?date=${selectedDate}&limit=${itemsPerPage}&skip=${skip}`;
-        if (selectedCategory) {
-          url += `&category=${encodeURIComponent(selectedCategory)}`;
-        }
+      if (selectedCategory) {
+        params.category = selectedCategory;
       }
       
-      fetch(url)
+      // 검색 중이면 검색 API 사용, 아니면 기본 클러스터 API 사용
+      let apiPromise;
+      if (isSearching && searchQuery.trim()) {
+        params.q = searchQuery;
+        apiPromise = apiService.statistics.search(params);
+      } else if (selectedCategory) {
+        apiPromise = apiService.clusters.getHotByCategory(selectedCategory, params);
+      } else {
+        apiPromise = apiService.clusters.getHot(params);
+      }
+      
+      apiPromise
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('클러스터 데이터 로드 성공:', data);
-          setClusters(data.clusters);
-          setTotalCount(data.totalCount);
-          setTotalPages(data.totalPages);
+          console.log('클러스터 데이터 로드 성공:', response.data);
+          setClusters(response.data.clusters || []);
+          setTotalCount(response.data.pagination?.total || 0);
+          setTotalPages(response.data.pagination?.totalPages || 1);
           setLoading(false);
         })
         .catch(error => {
@@ -115,32 +103,20 @@ function App() {
         });
       
       // 인기 뉴스 정보 가져오기
-      fetch(`http://localhost:3001/api/trending?date=${selectedDate}&limit=5`)
+      apiService.statistics.getTrending({ date: selectedDate, limit: 5 })
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('인기 뉴스 데이터 로드 성공:', data);
-          setTrendingData(data);
+          console.log('인기 뉴스 데이터 로드 성공:', response.data);
+          setTrendingData(response.data);
         })
         .catch(error => {
           console.error('Error fetching trending data:', error);
         });
         
       // 통계 데이터도 가져오기
-      fetch(`http://localhost:3001/api/stats?date=${selectedDate}`)
+      apiService.statistics.getStats()
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('통계 데이터 로드 성공:', data);
-          setStats(data);
+          console.log('통계 데이터 로드 성공:', response.data);
+          setStats(response.data);
         })
         .catch(error => {
           console.error('Error fetching stats:', error);
@@ -148,6 +124,22 @@ function App() {
         });
     }
   }, [selectedDate, selectedCategory, page, isSearching, searchQuery]);
+  
+  // 클러스터 세부 정보 가져오기
+  const fetchClusterDetails = (clusterId) => {
+    setLoading(true);
+    apiService.clusters.getById(clusterId)
+      .then(response => {
+        console.log('클러스터 상세 정보 로드 성공:', response.data);
+        setSelectedCluster(response.data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching cluster details:', error);
+        setLoading(false);
+        alert('클러스터 상세 정보를 가져오는데 실패했습니다.');
+      });
+  };
   
   // 검색 처리 함수
   const handleSearch = (e) => {
@@ -196,7 +188,12 @@ function App() {
 
   // 클러스터 세부 정보 보기
   const viewClusterDetails = (cluster) => {
-    setSelectedCluster(cluster);
+    // ID만 있는 경우 상세 정보 가져오기
+    if (cluster._id && (!cluster.left || !cluster.center || !cluster.right)) {
+      fetchClusterDetails(cluster._id);
+    } else {
+      setSelectedCluster(cluster);
+    }
   };
 
   // 키워드 렌더링 함수
@@ -224,14 +221,22 @@ function App() {
   const renderStatsDashboard = () => {
     if (!stats) return null;
     
-    const { biasDistribution, totalClusters } = stats;
+    const { biasCount, total } = stats;
+    const totalBias = (biasCount?.left || 0) + (biasCount?.center || 0) + (biasCount?.right || 0);
+    
+    // 각 편향성 비율 계산
+    const biasDistribution = {
+      avgLeftRatio: totalBias ? (biasCount?.left || 0) / totalBias : 0,
+      avgCenterRatio: totalBias ? (biasCount?.center || 0) / totalBias : 0,
+      avgRightRatio: totalBias ? (biasCount?.right || 0) / totalBias : 0
+    };
     
     return (
       <div className="stats-dashboard">
         <h2>뉴스 통계 ({selectedDate})</h2>
         <div className="stats-card">
           <h3>뉴스 클러스터 수</h3>
-          <div className="stats-number">{totalClusters}</div>
+          <div className="stats-number">{total || 0}</div>
         </div>
         {biasDistribution && (
           <div className="stats-card">
@@ -270,96 +275,100 @@ function App() {
           <button className="back-button" onClick={goBack}>← 목록으로 돌아가기</button>
         </header>
         
-        <div className="cluster-detail">
-          <h2 className="detail-title">{selectedCluster.title}</h2>
-          <div className="detail-meta">
-            <span className="detail-date">{selectedCluster.crawl_date}</span>
-          </div>
-          
-          <div className="bias-section">
-            <h3>정치 성향 분포</h3>
-            {renderBiasGraph(selectedCluster.bias_ratio)}
-          </div>
-          
-          <div className="perspectives">
-            <div className="perspective-columns">
-              {/* 진보적 관점 */}
-              <div className="perspective left-perspective">
-                <h3>진보적 관점</h3>
-                {selectedCluster.left && selectedCluster.left.summary 
-                  ? (<div className="perspective-content">
-                      <p className="summary">{selectedCluster.left.summary}</p>
-                      {renderKeywords(selectedCluster.left.keywords)}
-                      <div className="source-list">
-                        <h4>출처</h4>
-                        <ul>
-                          {selectedCluster.left.press_list && selectedCluster.left.press_list.map((press, i) => (
-                            <li key={i}>
-                              {selectedCluster.left.left_article_urls && selectedCluster.left.left_article_urls[i] 
-                                ? <a href={selectedCluster.left.left_article_urls[i]} target="_blank" rel="noopener noreferrer">{press}</a>
-                                : press
-                              }
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>)
-                  : <p className="empty-perspective">진보적 관점의 기사가 없습니다.</p>
-                }
-              </div>
-              
-              {/* 중도적 관점 */}
-              <div className="perspective center-perspective">
-                <h3>중도적 관점</h3>
-                {selectedCluster.center && selectedCluster.center.summary 
-                  ? (<div className="perspective-content">
-                      <p className="summary">{selectedCluster.center.summary}</p>
-                      {renderKeywords(selectedCluster.center.keywords)}
-                      <div className="source-list">
-                        <h4>출처</h4>
-                        <ul>
-                          {selectedCluster.center.press_list && selectedCluster.center.press_list.map((press, i) => (
-                            <li key={i}>
-                              {selectedCluster.center.center_article_urls && selectedCluster.center.center_article_urls[i] 
-                                ? <a href={selectedCluster.center.center_article_urls[i]} target="_blank" rel="noopener noreferrer">{press}</a>
-                                : press
-                              }
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>)
-                  : <p className="empty-perspective">중도적 관점의 기사가 없습니다.</p>
-                }
-              </div>
-              
-              {/* 보수적 관점 */}
-              <div className="perspective right-perspective">
-                <h3>보수적 관점</h3>
-                {selectedCluster.right && selectedCluster.right.summary 
-                  ? (<div className="perspective-content">
-                      <p className="summary">{selectedCluster.right.summary}</p>
-                      {renderKeywords(selectedCluster.right.keywords)}
-                      <div className="source-list">
-                        <h4>출처</h4>
-                        <ul>
-                          {selectedCluster.right.press_list && selectedCluster.right.press_list.map((press, i) => (
-                            <li key={i}>
-                              {selectedCluster.right.right_article_urls && selectedCluster.right.right_article_urls[i] 
-                                ? <a href={selectedCluster.right.right_article_urls[i]} target="_blank" rel="noopener noreferrer">{press}</a>
-                                : press
-                              }
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>)
-                  : <p className="empty-perspective">보수적 관점의 기사가 없습니다.</p>
-                }
+        {loading ? (
+          <div className="loading">뉴스 상세 정보를 불러오는 중...</div>
+        ) : (
+          <div className="cluster-detail">
+            <h2 className="detail-title">{selectedCluster.title}</h2>
+            <div className="detail-meta">
+              <span className="detail-date">{selectedCluster.pub_date || selectedCluster.crawl_date}</span>
+            </div>
+            
+            <div className="bias-section">
+              <h3>정치 성향 분포</h3>
+              {renderBiasGraph(selectedCluster.bias_ratio)}
+            </div>
+            
+            <div className="perspectives">
+              <div className="perspective-columns">
+                {/* 진보적 관점 */}
+                <div className="perspective left-perspective">
+                  <h3>진보적 관점</h3>
+                  {selectedCluster.left && selectedCluster.left.summary 
+                    ? (<div className="perspective-content">
+                        <p className="summary">{selectedCluster.left.summary}</p>
+                        {renderKeywords(selectedCluster.left.keywords)}
+                        <div className="source-list">
+                          <h4>출처</h4>
+                          <ul>
+                            {selectedCluster.left.press_list && selectedCluster.left.press_list.map((press, i) => (
+                              <li key={i}>
+                                {selectedCluster.left.article_urls && selectedCluster.left.article_urls[i] 
+                                  ? <a href={selectedCluster.left.article_urls[i]} target="_blank" rel="noopener noreferrer">{press}</a>
+                                  : press
+                                }
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>)
+                    : <p className="empty-perspective">진보적 관점의 기사가 없습니다.</p>
+                  }
+                </div>
+                
+                {/* 중도적 관점 */}
+                <div className="perspective center-perspective">
+                  <h3>중도적 관점</h3>
+                  {selectedCluster.center && selectedCluster.center.summary 
+                    ? (<div className="perspective-content">
+                        <p className="summary">{selectedCluster.center.summary}</p>
+                        {renderKeywords(selectedCluster.center.keywords)}
+                        <div className="source-list">
+                          <h4>출처</h4>
+                          <ul>
+                            {selectedCluster.center.press_list && selectedCluster.center.press_list.map((press, i) => (
+                              <li key={i}>
+                                {selectedCluster.center.article_urls && selectedCluster.center.article_urls[i] 
+                                  ? <a href={selectedCluster.center.article_urls[i]} target="_blank" rel="noopener noreferrer">{press}</a>
+                                  : press
+                                }
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>)
+                    : <p className="empty-perspective">중도적 관점의 기사가 없습니다.</p>
+                  }
+                </div>
+                
+                {/* 보수적 관점 */}
+                <div className="perspective right-perspective">
+                  <h3>보수적 관점</h3>
+                  {selectedCluster.right && selectedCluster.right.summary 
+                    ? (<div className="perspective-content">
+                        <p className="summary">{selectedCluster.right.summary}</p>
+                        {renderKeywords(selectedCluster.right.keywords)}
+                        <div className="source-list">
+                          <h4>출처</h4>
+                          <ul>
+                            {selectedCluster.right.press_list && selectedCluster.right.press_list.map((press, i) => (
+                              <li key={i}>
+                                {selectedCluster.right.article_urls && selectedCluster.right.article_urls[i] 
+                                  ? <a href={selectedCluster.right.article_urls[i]} target="_blank" rel="noopener noreferrer">{press}</a>
+                                  : press
+                                }
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>)
+                    : <p className="empty-perspective">보수적 관점의 기사가 없습니다.</p>
+                  }
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
   }
@@ -503,7 +512,7 @@ function App() {
               <li key={cluster._id} className="cluster-item" onClick={() => viewClusterDetails(cluster)}>
                 <h2 className="cluster-title">{cluster.title}</h2>
                 <div className="cluster-meta">
-                  <span className="cluster-date">{cluster.crawl_date}</span>
+                  <span className="cluster-date">{cluster.pub_date || cluster.crawl_date}</span>
                   {cluster.category && (
                     <span className="cluster-category">{cluster.category}</span>
                   )}

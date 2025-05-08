@@ -28,6 +28,9 @@ function App() {
   
   // 인기 뉴스 상태
   const [trendingData, setTrendingData] = useState(null);
+  
+  // 에러 상태
+  const [error, setError] = useState(null);
 
   // 다크모드 토글
   const toggleDarkMode = () => {
@@ -48,7 +51,7 @@ function App() {
       })
       .catch(error => {
         console.error('Error fetching dates:', error);
-        alert('날짜 목록을 가져오는 중 오류가 발생했습니다. 서버가 실행 중인지 확인해주세요.');
+        setError('날짜 목록을 가져오는 중 오류가 발생했습니다.');
       });
       
     // 카테고리 목록 가져오기
@@ -59,6 +62,7 @@ function App() {
       })
       .catch(error => {
         console.error('Error fetching categories:', error);
+        setError('카테고리 목록을 가져오는 중 오류가 발생했습니다.');
       });
   }, []);
 
@@ -66,16 +70,13 @@ function App() {
   useEffect(() => {
     if (selectedDate) {
       setLoading(true);
+      setError(null);
       
       const params = {
-        limit: itemsPerPage,
+        date: selectedDate,
         page: page,
-        date: selectedDate
+        limit: itemsPerPage
       };
-      
-      if (selectedCategory) {
-        params.category = selectedCategory;
-      }
       
       // 검색 중이면 검색 API 사용, 아니면 기본 클러스터 API 사용
       let apiPromise;
@@ -83,6 +84,7 @@ function App() {
         params.q = searchQuery;
         apiPromise = apiService.statistics.search(params);
       } else if (selectedCategory) {
+        params.category = selectedCategory;
         apiPromise = apiService.clusters.getHotByCategory(selectedCategory, params);
       } else {
         apiPromise = apiService.clusters.getHot(params);
@@ -91,19 +93,32 @@ function App() {
       apiPromise
         .then(response => {
           console.log('클러스터 데이터 로드 성공:', response.data);
-          setClusters(response.data.clusters || []);
-          setTotalCount(response.data.pagination?.total || 0);
-          setTotalPages(response.data.pagination?.totalPages || 1);
+          if (response.data.clusters) {
+            setClusters(response.data.clusters);
+            
+            // 페이지네이션 정보
+            if (response.data.pagination) {
+              setTotalCount(response.data.pagination.total || 0);
+              setTotalPages(response.data.pagination.totalPages || 1);
+            } else {
+              setTotalCount(response.data.totalCount || response.data.clusters.length);
+              setTotalPages(response.data.totalPages || 1);
+            }
+          } else {
+            setClusters([]);
+            setTotalCount(0);
+            setTotalPages(1);
+          }
           setLoading(false);
         })
         .catch(error => {
           console.error('Error fetching data:', error);
           setLoading(false);
-          alert('뉴스 데이터를 가져오는 중 오류가 발생했습니다. 서버가 실행 중인지 확인해주세요.');
+          setError('뉴스 데이터를 가져오는 중 오류가 발생했습니다.');
         });
       
       // 인기 뉴스 정보 가져오기
-      apiService.statistics.getTrending({ date: selectedDate, limit: 5 })
+      apiService.statistics.getTrending()
         .then(response => {
           console.log('인기 뉴스 데이터 로드 성공:', response.data);
           setTrendingData(response.data);
@@ -120,7 +135,6 @@ function App() {
         })
         .catch(error => {
           console.error('Error fetching stats:', error);
-          alert('통계 데이터를 가져오는 중 오류가 발생했습니다.');
         });
     }
   }, [selectedDate, selectedCategory, page, isSearching, searchQuery]);
@@ -128,6 +142,8 @@ function App() {
   // 클러스터 세부 정보 가져오기
   const fetchClusterDetails = (clusterId) => {
     setLoading(true);
+    setError(null);
+    
     apiService.clusters.getById(clusterId)
       .then(response => {
         console.log('클러스터 상세 정보 로드 성공:', response.data);
@@ -137,7 +153,7 @@ function App() {
       .catch(error => {
         console.error('Error fetching cluster details:', error);
         setLoading(false);
-        alert('클러스터 상세 정보를 가져오는데 실패했습니다.');
+        setError('클러스터 상세 정보를 가져오는데 실패했습니다.');
       });
   };
   
@@ -160,6 +176,10 @@ function App() {
 
   // 정치 편향성 그래프 렌더링 함수
   const renderBiasGraph = (biasRatio) => {
+    if (!biasRatio) {
+      biasRatio = { left: 0.33, center: 0.34, right: 0.33 };
+    }
+    
     const leftWidth = `${biasRatio.left * 100}%`;
     const centerWidth = `${biasRatio.center * 100}%`;
     const rightWidth = `${biasRatio.right * 100}%`;
@@ -215,6 +235,7 @@ function App() {
   // 뒤로가기 함수
   const goBack = () => {
     setSelectedCluster(null);
+    setError(null);
   };
 
   // 통계 대시보드 렌더링
@@ -277,6 +298,8 @@ function App() {
         
         {loading ? (
           <div className="loading">뉴스 상세 정보를 불러오는 중...</div>
+        ) : error ? (
+          <div className="error-message">{error}</div>
         ) : (
           <div className="cluster-detail">
             <h2 className="detail-title">{selectedCluster.title}</h2>
@@ -409,9 +432,9 @@ function App() {
     
     return (
       <div className="trending-news">
-        <h3 className="trending-title">오늘의 주요 뉴스</h3>
+        <h3 className="trending-title">주요 뉴스</h3>
         <div className="trending-list">
-          {trendingData.trendingClusters.map((cluster, index) => (
+          {trendingData.trendingClusters.slice(0, 5).map((cluster, index) => (
             <div key={index} className="trending-item" onClick={() => viewClusterDetails(cluster)}>
               <span className="trending-number">{index + 1}</span>
               <h4 className="trending-cluster-title">{cluster.title}</h4>
@@ -435,6 +458,8 @@ function App() {
         </div>
         <p className="subtitle">다양한 관점에서 뉴스를 비교해보세요</p>
       </header>
+      
+      {error && <div className="error-message">{error}</div>}
       
       <div className="top-controls">
         <div className="date-filter">

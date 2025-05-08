@@ -1,4 +1,4 @@
-const { connectToDB, addImageUrls, respond, getPaginationData, formatResponse } = require('./db-utils');
+const { connectToDB, addImageUrls, respond, getPaginationData, formatListResponse, formatErrorResponse } = require('./db-utils');
 
 exports.handler = async function(event, context) {
   try {
@@ -16,14 +16,14 @@ exports.handler = async function(event, context) {
     // 카테고리 파라미터 확인
     const category = pathSegments[pathSegments.length - 1];
     if (!category) {
-      return respond(400, { error: 'Category parameter is required' });
+      return respond(400, formatErrorResponse('Category parameter is required', 'ERROR400'));
     }
 
     // 데이터베이스 연결
     const collection = await connectToDB();
     
-    // 페이지네이션 데이터 가져오기
-    const { limit, page, skip, paginationData } = getPaginationData(event);
+    // 페이지네이션 데이터 가져오기 (기본값 20개씩)
+    const { limit, page, skip, paginationData } = getPaginationData(event, 20);
 
     // 카테고리별 핫 뉴스 조회
     const clusters = await collection
@@ -66,16 +66,14 @@ exports.handler = async function(event, context) {
     const processedClusters = addImageUrls(clusters);
 
     // 응답 형식화
-    return respond(200, {
-      clusters: processedClusters,
-      pagination: {
-        ...paginationData,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
+    const response = formatListResponse(processedClusters, {
+      ...paginationData,
+      total
     });
+
+    return respond(200, response);
   } catch (error) {
     console.error('clusters-hot-category.js Error:', error);
-    return respond(500, { error: 'Internal Server Error', message: error.message });
+    return respond(500, formatErrorResponse('Internal Server Error', 'ERROR500'));
   }
 };

@@ -6,7 +6,57 @@
 [functions]
   directory = "../netlify/functions"
 
+# 특정 API 경로를 특정 함수로 리디렉션
 [[redirects]]
-  from   = "/api/*"
-  to     = "/.netlify/functions/:splat"
+  from = "/api/clusters/hot"
+  to = "/.netlify/functions/clusters-hot"
+  status = 200
+
+[[redirects]]
+  from = "/api/clusters/latest"
+  to = "/.netlify/functions/clusters-latest"
+  status = 200
+
+[[redirects]]
+  from = "/api/clusters/hot/:id"
+  to = "/.netlify/functions/clusters-hot-id"
+  status = 200
+  force = true
+  [redirects.query]
+    id = ":id"
+
+[[redirects]]
+  from = "/api/clusters/latest/:id"
+  to = "/.netlify/functions/clusters-latest-id"
+  status = 200
+  force = true
+  [redirects.query]
+    id = ":id"
+
+[[redirects]]
+  from = "/api/clusters/hot/:category"
+  to = "/.netlify/functions/clusters-hot-category"
+  status = 200
+  force = true
+  [redirects.query]
+    category = ":category"
+
+[[redirects]]
+  from = "/api/clusters/latest/:category"
+  to = "/.netlify/functions/clusters-latest-category"
+  status = 200
+  force = true
+  [redirects.query]
+    category = ":category"
+
+# 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA를 위한 리디렉션
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200

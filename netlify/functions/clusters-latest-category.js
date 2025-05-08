@@ -32,7 +32,10 @@ exports.handler = async function(event, context) {
     
     const clusters = await collection
       .find({ category })
-      .sort({ pub_date: -1 }) // 최신순으로 정렬
+      .sort({ 
+        'pub_date': -1,         // 최신순
+        'bias_ratio.total': -1  // 같은 날짜면 편향도가 높은 순
+      })
       .skip(skip)
       .limit(limit)
       .toArray();

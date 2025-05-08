@@ -14,20 +14,19 @@ async function connectToDB() {
   }
 }
 
-// CORS 헤더 설정
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'http://localhost:5173',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Accept',
-  'Access-Control-Max-Age': '86400'
-};
-
 exports.handler = async function(event, context) {
+  // CORS 헤더 설정
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS'
+  };
+
   // OPTIONS 요청 처리
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers,
       body: ''
     };
   }
@@ -165,7 +164,10 @@ exports.handler = async function(event, context) {
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         isSuccess: true,
         result: {
@@ -248,7 +250,10 @@ exports.handler = async function(event, context) {
     console.error('statistics.js Error:', error);
     return {
       statusCode: 500,
-      headers: corsHeaders,
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         isSuccess: false,
         message: 'Internal Server Error'

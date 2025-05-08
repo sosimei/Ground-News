@@ -14,28 +14,99 @@ async function connectToDB() {
   }
 }
 
+// 날짜 범위에 따른 시계열 데이터 생성
+async function getTimeSeriesData(dateFilter) {
+  const pipeline = [
+    { $match: dateFilter },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$crawl_date" },
+          month: { $month: "$crawl_date" },
+          day: { $dayOfMonth: "$crawl_date" }
+        },
+        count: { $sum: 1 },
+        left: { $avg: "$bias_ratio.left" },
+        center: { $avg: "$bias_ratio.center" },
+        right: { $avg: "$bias_ratio.right" }
+      }
+    },
+    {
+      $sort: {
+        "_id.year": 1,
+        "_id.month": 1,
+        "_id.day": 1
+      }
+    }
+  ];
+
+  const timeSeriesData = await collection.aggregate(pipeline).toArray();
+  return timeSeriesData.map(item => ({
+    date: new Date(item._id.year, item._id.month - 1, item._id.day).toISOString().split('T')[0],
+    count: item.count,
+    bias: {
+      left: item.left,
+      center: item.center,
+      right: item.right
+    }
+  }));
+}
+
+// 언론사별 상세 통계
+async function getDetailedMediaStats(dateFilter) {
+  const pipeline = [
+    { $match: dateFilter },
+    {
+      $group: {
+        _id: "$press_list",
+        count: { $sum: 1 },
+        avgBias: {
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      }
+    }
+  ];
+
+  const mediaStats = await collection.aggregate(pipeline).toArray();
+  return mediaStats.map(stat => ({
+    press: stat._id,
+    count: stat.count,
+    bias: stat.avgBias
+  }));
+}
+
+// 카테고리별 상세 통계
+async function getDetailedCategoryStats(dateFilter) {
+  const pipeline = [
+    { $match: dateFilter },
+    {
+      $group: {
+        _id: "$category",
+        count: { $sum: 1 },
+        avgBias: {
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      }
+    }
+  ];
+
+  const categoryStats = await collection.aggregate(pipeline).toArray();
+  return categoryStats.map(stat => ({
+    category: stat._id,
+    count: stat.count,
+    bias: stat.avgBias
+  }));
+}
+
 exports.handler = async function(event, context) {
-  // CORS 헤더 설정
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Max-Age': '86400'
-  };
-
-  // OPTIONS 요청 처리
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers,
-      body: ''
-    };
-  }
-
   try {
     await connectToDB();
 
-    // 날짜 필터 적용
+    // 날짜 필터 설정
     const { dateFrom, dateTo } = event.queryStringParameters || {};
     let dateFilter = {};
     
@@ -61,7 +132,6 @@ exports.handler = async function(event, context) {
       }
     ]).toArray();
 
-    // 필터링된 바이어스 통계
     const filteredBiasStats = await collection.aggregate([
       { $match: dateFilter },
       {
@@ -74,175 +144,36 @@ exports.handler = async function(event, context) {
       }
     ]).toArray();
 
-    // 언론사별 통계
-    const mediaStats = await collection.aggregate([
-      {
-        $unwind: "$media_counts"
-      },
-      {
-        $group: {
-          _id: "$media_counts.media",
-          count: { $sum: "$media_counts.count" },
-          leftBias: { $avg: "$bias_ratio.left" },
-          centerBias: { $avg: "$bias_ratio.center" },
-          rightBias: { $avg: "$bias_ratio.right" }
-        }
-      }
-    ]).toArray();
+    // 시계열 데이터
+    const timeSeriesData = await getTimeSeriesData(dateFilter);
 
-    // 필터링된 언론사별 통계
-    const filteredMediaStats = await collection.aggregate([
-      { $match: dateFilter },
-      {
-        $unwind: "$media_counts"
-      },
-      {
-        $group: {
-          _id: "$media_counts.media",
-          count: { $sum: "$media_counts.count" },
-          leftBias: { $avg: "$bias_ratio.left" },
-          centerBias: { $avg: "$bias_ratio.center" },
-          rightBias: { $avg: "$bias_ratio.right" }
-        }
-      }
-    ]).toArray();
+    // 언론사별 상세 통계
+    const mediaStats = await getDetailedMediaStats(dateFilter);
 
-    // 카테고리별 통계
-    const categoryStats = await collection.aggregate([
-      {
-        $group: {
-          _id: "$category",
-          count: { $sum: 1 },
-          leftBias: { $avg: "$bias_ratio.left" },
-          centerBias: { $avg: "$bias_ratio.center" },
-          rightBias: { $avg: "$bias_ratio.right" }
-        }
-      }
-    ]).toArray();
-
-    // 필터링된 카테고리별 통계
-    const filteredCategoryStats = await collection.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: "$category",
-          count: { $sum: 1 },
-          leftBias: { $avg: "$bias_ratio.left" },
-          centerBias: { $avg: "$bias_ratio.center" },
-          rightBias: { $avg: "$bias_ratio.right" }
-        }
-      }
-    ]).toArray();
-
-    // 일별 통계
-    const dailyStats = await collection.aggregate([
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$crawl_date" } },
-          count: { $sum: 1 },
-          leftBias: { $avg: "$bias_ratio.left" },
-          centerBias: { $avg: "$bias_ratio.center" },
-          rightBias: { $avg: "$bias_ratio.right" }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]).toArray();
-
-    // 필터링된 일별 통계
-    const filteredDailyStats = await collection.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$crawl_date" } },
-          count: { $sum: 1 },
-          leftBias: { $avg: "$bias_ratio.left" },
-          centerBias: { $avg: "$bias_ratio.center" },
-          rightBias: { $avg: "$bias_ratio.right" }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]).toArray();
+    // 카테고리별 상세 통계
+    const categoryStats = await getDetailedCategoryStats(dateFilter);
 
     return {
       statusCode: 200,
       headers: {
-        ...headers,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
       },
       body: JSON.stringify({
         isSuccess: true,
+        code: "COMMON200",
+        message: "성공!",
         result: {
           total,
           biasStats: biasStats[0] || { left: 0, center: 0, right: 0 },
-          mediaStats: mediaStats.reduce((acc, curr) => {
-            acc[curr._id] = {
-              count: curr.count,
-              bias: {
-                left: curr.leftBias,
-                center: curr.centerBias,
-                right: curr.rightBias
-              }
-            };
-            return acc;
-          }, {}),
-          categoryStats: categoryStats.reduce((acc, curr) => {
-            acc[curr._id] = {
-              count: curr.count,
-              bias: {
-                left: curr.leftBias,
-                center: curr.centerBias,
-                right: curr.rightBias
-              }
-            };
-            return acc;
-          }, {}),
-          dailyStats: dailyStats.reduce((acc, curr) => {
-            acc[curr._id] = {
-              count: curr.count,
-              bias: {
-                left: curr.leftBias,
-                center: curr.centerBias,
-                right: curr.rightBias
-              }
-            };
-            return acc;
-          }, {}),
+          timeSeriesData,
+          mediaStats,
+          categoryStats,
           filtered: {
             total: filteredTotal,
-            biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0 },
-            mediaStats: filteredMediaStats.reduce((acc, curr) => {
-              acc[curr._id] = {
-                count: curr.count,
-                bias: {
-                  left: curr.leftBias,
-                  center: curr.centerBias,
-                  right: curr.rightBias
-                }
-              };
-              return acc;
-            }, {}),
-            categoryStats: filteredCategoryStats.reduce((acc, curr) => {
-              acc[curr._id] = {
-                count: curr.count,
-                bias: {
-                  left: curr.leftBias,
-                  center: curr.centerBias,
-                  right: curr.rightBias
-                }
-              };
-              return acc;
-            }, {}),
-            dailyStats: filteredDailyStats.reduce((acc, curr) => {
-              acc[curr._id] = {
-                count: curr.count,
-                bias: {
-                  left: curr.leftBias,
-                  center: curr.centerBias,
-                  right: curr.rightBias
-                }
-              };
-              return acc;
-            }, {})
+            biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0 }
           }
         }
       })
@@ -252,12 +183,16 @@ exports.handler = async function(event, context) {
     return {
       statusCode: 500,
       headers: {
-        ...headers,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
       },
       body: JSON.stringify({
         isSuccess: false,
-        message: 'Internal Server Error'
+        code: "ERROR500",
+        message: "서버 내부 오류",
+        result: null
       })
     };
   }

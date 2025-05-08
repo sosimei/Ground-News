@@ -18,8 +18,19 @@ exports.handler = async function(event, context) {
   try {
     await connectToDB();
 
+    // 날짜 필터 적용
+    const { dateFrom, dateTo } = event.queryStringParameters || {};
+    let dateFilter = {};
+    
+    if (dateFrom || dateTo) {
+      dateFilter.crawl_date = {};
+      if (dateFrom) dateFilter.crawl_date.$gte = new Date(dateFrom);
+      if (dateTo) dateFilter.crawl_date.$lte = new Date(dateTo);
+    }
+
     // 기본 통계
     const total = await collection.countDocuments();
+    const filteredTotal = await collection.countDocuments(dateFilter);
 
     // 바이어스 통계
     const biasStats = await collection.aggregate([
@@ -28,7 +39,32 @@ exports.handler = async function(event, context) {
           _id: null,
           left: { $avg: "$bias_ratio.left" },
           center: { $avg: "$bias_ratio.center" },
-          right: { $avg: "$bias_ratio.right" }
+          right: { $avg: "$bias_ratio.right" },
+          maxLeft: { $max: "$bias_ratio.left" },
+          maxCenter: { $max: "$bias_ratio.center" },
+          maxRight: { $max: "$bias_ratio.right" },
+          minLeft: { $min: "$bias_ratio.left" },
+          minCenter: { $min: "$bias_ratio.center" },
+          minRight: { $min: "$bias_ratio.right" }
+        }
+      }
+    ]).toArray();
+
+    // 필터링된 바이어스 통계
+    const filteredBiasStats = await collection.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: null,
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" },
+          maxLeft: { $max: "$bias_ratio.left" },
+          maxCenter: { $max: "$bias_ratio.center" },
+          maxRight: { $max: "$bias_ratio.right" },
+          minLeft: { $min: "$bias_ratio.left" },
+          minCenter: { $min: "$bias_ratio.center" },
+          minRight: { $min: "$bias_ratio.right" }
         }
       }
     ]).toArray();
@@ -41,7 +77,27 @@ exports.handler = async function(event, context) {
       {
         $group: {
           _id: "$media_counts.media",
-          count: { $sum: "$media_counts.count" }
+          count: { $sum: "$media_counts.count" },
+          leftBias: { $avg: "$bias_ratio.left" },
+          centerBias: { $avg: "$bias_ratio.center" },
+          rightBias: { $avg: "$bias_ratio.right" }
+        }
+      }
+    ]).toArray();
+
+    // 필터링된 언론사별 통계
+    const filteredMediaStats = await collection.aggregate([
+      { $match: dateFilter },
+      {
+        $unwind: "$media_counts"
+      },
+      {
+        $group: {
+          _id: "$media_counts.media",
+          count: { $sum: "$media_counts.count" },
+          leftBias: { $avg: "$bias_ratio.left" },
+          centerBias: { $avg: "$bias_ratio.center" },
+          rightBias: { $avg: "$bias_ratio.right" }
         }
       }
     ]).toArray();
@@ -51,33 +107,55 @@ exports.handler = async function(event, context) {
       {
         $group: {
           _id: "$category",
-          count: { $sum: 1 }
+          count: { $sum: 1 },
+          leftBias: { $avg: "$bias_ratio.left" },
+          centerBias: { $avg: "$bias_ratio.center" },
+          rightBias: { $avg: "$bias_ratio.right" }
         }
       }
     ]).toArray();
 
-    // 날짜 필터 적용
-    const { dateFrom, dateTo } = event.queryStringParameters || {};
-    let dateFilter = {};
-    
-    if (dateFrom || dateTo) {
-      dateFilter.crawl_date = {};
-      if (dateFrom) dateFilter.crawl_date.$gte = new Date(dateFrom);
-      if (dateTo) dateFilter.crawl_date.$lte = new Date(dateTo);
-    }
-
-    // 필터링된 통계
-    const filteredTotal = await collection.countDocuments(dateFilter);
-    const filteredBiasStats = await collection.aggregate([
+    // 필터링된 카테고리별 통계
+    const filteredCategoryStats = await collection.aggregate([
       { $match: dateFilter },
       {
         $group: {
-          _id: null,
-          left: { $avg: "$bias_ratio.left" },
-          center: { $avg: "$bias_ratio.center" },
-          right: { $avg: "$bias_ratio.right" }
+          _id: "$category",
+          count: { $sum: 1 },
+          leftBias: { $avg: "$bias_ratio.left" },
+          centerBias: { $avg: "$bias_ratio.center" },
+          rightBias: { $avg: "$bias_ratio.right" }
         }
       }
+    ]).toArray();
+
+    // 일별 통계
+    const dailyStats = await collection.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$crawl_date" } },
+          count: { $sum: 1 },
+          leftBias: { $avg: "$bias_ratio.left" },
+          centerBias: { $avg: "$bias_ratio.center" },
+          rightBias: { $avg: "$bias_ratio.right" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]).toArray();
+
+    // 필터링된 일별 통계
+    const filteredDailyStats = await collection.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$crawl_date" } },
+          count: { $sum: 1 },
+          leftBias: { $avg: "$bias_ratio.left" },
+          centerBias: { $avg: "$bias_ratio.center" },
+          rightBias: { $avg: "$bias_ratio.right" }
+        }
+      },
+      { $sort: { _id: 1 } }
     ]).toArray();
 
     return {
@@ -90,18 +168,84 @@ exports.handler = async function(event, context) {
       },
       body: JSON.stringify({
         total,
-        biasStats: biasStats[0] || { left: 0, center: 0, right: 0 },
+        biasStats: biasStats[0] || { 
+          left: 0, center: 0, right: 0,
+          maxLeft: 0, maxCenter: 0, maxRight: 0,
+          minLeft: 0, minCenter: 0, minRight: 0
+        },
         mediaStats: mediaStats.reduce((acc, curr) => {
-          acc[curr._id] = curr.count;
+          acc[curr._id] = {
+            count: curr.count,
+            bias: {
+              left: curr.leftBias,
+              center: curr.centerBias,
+              right: curr.rightBias
+            }
+          };
           return acc;
         }, {}),
         categoryStats: categoryStats.reduce((acc, curr) => {
-          acc[curr._id] = curr.count;
+          acc[curr._id] = {
+            count: curr.count,
+            bias: {
+              left: curr.leftBias,
+              center: curr.centerBias,
+              right: curr.rightBias
+            }
+          };
+          return acc;
+        }, {}),
+        dailyStats: dailyStats.reduce((acc, curr) => {
+          acc[curr._id] = {
+            count: curr.count,
+            bias: {
+              left: curr.leftBias,
+              center: curr.centerBias,
+              right: curr.rightBias
+            }
+          };
           return acc;
         }, {}),
         filtered: {
           total: filteredTotal,
-          biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0 }
+          biasStats: filteredBiasStats[0] || { 
+            left: 0, center: 0, right: 0,
+            maxLeft: 0, maxCenter: 0, maxRight: 0,
+            minLeft: 0, minCenter: 0, minRight: 0
+          },
+          mediaStats: filteredMediaStats.reduce((acc, curr) => {
+            acc[curr._id] = {
+              count: curr.count,
+              bias: {
+                left: curr.leftBias,
+                center: curr.centerBias,
+                right: curr.rightBias
+              }
+            };
+            return acc;
+          }, {}),
+          categoryStats: filteredCategoryStats.reduce((acc, curr) => {
+            acc[curr._id] = {
+              count: curr.count,
+              bias: {
+                left: curr.leftBias,
+                center: curr.centerBias,
+                right: curr.rightBias
+              }
+            };
+            return acc;
+          }, {}),
+          dailyStats: filteredDailyStats.reduce((acc, curr) => {
+            acc[curr._id] = {
+              count: curr.count,
+              bias: {
+                left: curr.leftBias,
+                center: curr.centerBias,
+                right: curr.rightBias
+              }
+            };
+            return acc;
+          }, {})
         }
       })
     };

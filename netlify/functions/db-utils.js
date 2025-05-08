@@ -99,13 +99,61 @@ const formatListResponse = (clusters, pagination) => {
   };
 };
 
-// API 응답 형식화 함수 (상세)
+// API 응답 형식화 함수 (상세) - DetailResponse 형식에 맞게 수정
 const formatDetailResponse = (cluster) => {
+  // 각 정치적 관점별 데이터 처리
+  const processedResult = {
+    title: cluster.title || "",
+    pub_date: cluster.pub_date || "",
+    article_ids: [],
+    article_urls: [],
+    bias_ratio: cluster.bias_ratio || { left: 0, center: 0, right: 0 },
+    left: {
+      summary: cluster.left?.summary || "",
+      keywords: cluster.left?.keywords || [],
+      press_list: cluster.left?.press_list || [],
+      article_ids: cluster.left?.left_article_ids || [],
+      article_urls: cluster.left?.left_article_urls || []
+    },
+    center: {
+      summary: cluster.center?.summary || "",
+      keywords: cluster.center?.keywords || [],
+      press_list: cluster.center?.press_list || [],
+      article_ids: cluster.center?.center_article_ids || [],
+      article_urls: cluster.center?.center_article_urls || []
+    },
+    right: {
+      summary: cluster.right?.summary || "",
+      keywords: cluster.right?.keywords || [],
+      press_list: cluster.right?.press_list || [],
+      article_ids: cluster.right?.right_article_ids || [],
+      article_urls: cluster.right?.right_article_urls || []
+    },
+    media_counts: cluster.media_counts || {},
+    created_at: cluster.created_at || new Date().toISOString(),
+    updated_at: cluster.updated_at || new Date().toISOString(),
+    model_ver: cluster.model_ver || ""
+  };
+
+  // 모든 기사 ID 통합
+  processedResult.article_ids = [
+    ...(processedResult.left.article_ids || []),
+    ...(processedResult.center.article_ids || []),
+    ...(processedResult.right.article_ids || [])
+  ];
+
+  // 모든 기사 URL 통합
+  processedResult.article_urls = [
+    ...(processedResult.left.article_urls || []),
+    ...(processedResult.center.article_urls || []),
+    ...(processedResult.right.article_urls || [])
+  ];
+
   return {
     isSuccess: true,
     code: 200,
     message: "성공",
-    result: cluster
+    result: processedResult
   };
 };
 

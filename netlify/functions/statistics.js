@@ -37,8 +37,9 @@ exports.handler = async function(event, context) {
     const total = await collection.countDocuments();
 
     // 쿼리 파라미터 처리
-    const { dateFrom, dateTo, timeframe } = event.queryStringParameters || {};
+    const { dateFrom, dateTo, timeframe, category, media } = event.queryStringParameters || {};
     let dateFilter = {};
+    let additionalFilter = {};
     
     // 날짜 필터 또는 타임프레임 적용
     if (dateFrom || dateTo || timeframe) {
@@ -78,6 +79,17 @@ exports.handler = async function(event, context) {
       }
     }
 
+    // 추가 필터 적용
+    if (category) {
+      additionalFilter.category = category;
+    }
+
+    // 최종 필터 병합
+    const filter = {
+      ...dateFilter,
+      ...additionalFilter
+    };
+
     // 바이어스 통계
     const biasStats = await collection.aggregate([
       {
@@ -85,7 +97,8 @@ exports.handler = async function(event, context) {
           _id: null,
           left: { $avg: "$bias_ratio.left" },
           center: { $avg: "$bias_ratio.center" },
-          right: { $avg: "$bias_ratio.right" }
+          right: { $avg: "$bias_ratio.right" },
+          count: { $sum: 1 }
         }
       }
     ]).toArray();
@@ -106,6 +119,33 @@ exports.handler = async function(event, context) {
       }
     ]).toArray();
 
+    // 언론사별 편향도 통계
+    const mediaBiasStats = await collection.aggregate([
+      {
+        $unwind: "$media_counts"
+      },
+      {
+        $group: {
+          _id: "$media_counts.media",
+          count: { $sum: "$media_counts.count" },
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      },
+      {
+        $match: {
+          count: { $gt: 5 } // 최소 5개 이상의 기사가 있는 언론사만 포함
+        }
+      },
+      {
+        $sort: { count: -1 } // 내림차순 정렬
+      },
+      {
+        $limit: 20 // 상위 20개 언론사만 반환
+      }
+    ]).toArray();
+
     // 카테고리별 통계
     const categoryStats = await collection.aggregate([
       {
@@ -119,14 +159,66 @@ exports.handler = async function(event, context) {
       }
     ]).toArray();
 
-    // 트렌드 데이터 (최근 7일간 일별 데이터)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // 카테고리별 편향도 통계
+    const categoryBiasStats = await collection.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 },
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      },
+      {
+        $match: {
+          _id: { $ne: null }, // null 카테고리 제외
+          count: { $gt: 5 } // 최소 5개 이상의 기사가 있는 카테고리만 포함
+        }
+      },
+      {
+        $sort: { count: -1 } // 내림차순 정렬
+      }
+    ]).toArray();
+
+    // 월별 트렌드 데이터 (최근 6개월)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const monthlyTrends = await collection.aggregate([
+      {
+        $match: {
+          crawl_date: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$crawl_date" },
+            month: { $month: "$crawl_date" }
+          },
+          count: { $sum: 1 },
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      },
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1
+        }
+      }
+    ]).toArray();
+
+    // 일별 트렌드 데이터 (최근 14일)
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
     
     const dailyTrends = await collection.aggregate([
       {
         $match: {
-          crawl_date: { $gte: sevenDaysAgo }
+          crawl_date: { $gte: twoWeeksAgo }
         }
       },
       {
@@ -152,23 +244,78 @@ exports.handler = async function(event, context) {
     ]).toArray();
 
     // 필터링된 통계
-    const filteredTotal = Object.keys(dateFilter).length > 0 ? 
-      await collection.countDocuments(dateFilter) : 
+    const filteredTotal = Object.keys(filter).length > 0 ? 
+      await collection.countDocuments(filter) : 
       total;
 
-    const filteredBiasStats = Object.keys(dateFilter).length > 0 ? 
+    const filteredBiasStats = Object.keys(filter).length > 0 ? 
       await collection.aggregate([
-        { $match: dateFilter },
+        { $match: filter },
         {
           $group: {
             _id: null,
             left: { $avg: "$bias_ratio.left" },
             center: { $avg: "$bias_ratio.center" },
-            right: { $avg: "$bias_ratio.right" }
+            right: { $avg: "$bias_ratio.right" },
+            count: { $sum: 1 }
           }
         }
       ]).toArray() : 
       biasStats;
+
+    // 키워드 데이터 (정치적 성향별 상위 키워드)
+    const keywordsByBias = await collection.aggregate([
+      {
+        $match: {
+          "left.keywords": { $exists: true, $ne: [] },
+          "center.keywords": { $exists: true, $ne: [] },
+          "right.keywords": { $exists: true, $ne: [] }
+        }
+      },
+      {
+        $project: {
+          left_keywords: "$left.keywords",
+          center_keywords: "$center.keywords",
+          right_keywords: "$right.keywords"
+        }
+      },
+      {
+        $unwind: "$left_keywords"
+      },
+      {
+        $group: {
+          _id: "$left_keywords.word",
+          count: { $sum: 1 },
+          score: { $avg: "$left_keywords.score" }
+        }
+      },
+      {
+        $match: {
+          count: { $gt: 2 },
+          _id: { $ne: null }
+        }
+      },
+      {
+        $sort: { score: -1 }
+      },
+      {
+        $limit: 20
+      }
+    ]).toArray();
+
+    // 월별 트렌드 데이터 포맷팅
+    const formattedMonthlyTrends = monthlyTrends.map(month => {
+      const date = new Date(month._id.year, month._id.month - 1, 1);
+      return {
+        date: `${month._id.year}-${String(month._id.month).padStart(2, '0')}`,
+        count: month.count,
+        bias: {
+          left: month.left,
+          center: month.center,
+          right: month.right
+        }
+      };
+    });
 
     // 일별 트렌드 데이터 포맷팅
     const formattedDailyTrends = dailyTrends.map(day => {
@@ -193,23 +340,49 @@ exports.handler = async function(event, context) {
         message: "성공!",
         result: {
           total,
-          biasStats: biasStats[0] || { left: 0, center: 0, right: 0 },
+          biasStats: biasStats[0] || { left: 0, center: 0, right: 0, count: 0 },
           mediaStats: mediaStats.reduce((acc, curr) => {
             acc[curr._id] = curr.count;
             return acc;
           }, {}),
+          mediaBiasStats: mediaBiasStats.map(item => ({
+            name: item._id,
+            count: item.count,
+            bias: {
+              left: item.left,
+              center: item.center,
+              right: item.right
+            }
+          })),
           categoryStats: categoryStats.reduce((acc, curr) => {
             if (curr._id) { // null 또는 undefined 카테고리 제외
               acc[curr._id] = curr.count;
             }
             return acc;
           }, {}),
+          categoryBiasStats: categoryBiasStats.map(item => ({
+            name: item._id,
+            count: item.count,
+            bias: {
+              left: item.left,
+              center: item.center,
+              right: item.right
+            }
+          })),
+          keywords: {
+            left: keywordsByBias.map(item => ({
+              word: item._id,
+              count: item.count,
+              score: item.score
+            }))
+          },
           trends: {
+            monthly: formattedMonthlyTrends,
             daily: formattedDailyTrends
           },
           filtered: {
             total: filteredTotal,
-            biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0 }
+            biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0, count: 0 }
           }
         }
       })

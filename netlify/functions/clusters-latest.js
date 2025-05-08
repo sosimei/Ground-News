@@ -1,23 +1,22 @@
-const { connectToDB, addImageUrls, respond } = require('./db-utils');
+const { connectToDB, addImageUrls, respond, getPaginationData, formatResponse } = require('./db-utils');
 
 exports.handler = async function(event, context) {
   try {
+    // CORS 프리플라이트 요청 처리
+    if (event.httpMethod === 'OPTIONS') {
+      return respond(200, {});
+    }
+
+    // 데이터베이스 연결
     const collection = await connectToDB();
     
-    // 기본값 설정
-    const limit = parseInt(event.queryStringParameters?.limit) || 5; // 기본값을 5로 변경
-    const page = parseInt(event.queryStringParameters?.page) || 1;
-    const skip = (page - 1) * limit;
+    // 페이지네이션 데이터 가져오기
+    const { limit, page, skip, paginationData } = getPaginationData(event);
 
-    // 디버그 로깅
-    console.log(`Fetching latest clusters with limit=${limit}, page=${page}`);
-    
+    // 최신 뉴스 조회 (발행일순)
     const clusters = await collection
       .find({})
-      .sort({ 
-        'pub_date': -1,         // 최신순
-        'bias_ratio.total': -1  // 같은 날짜면 편향도가 높은 순
-      })
+      .sort({ pub_date: -1 })  // 최신순
       .skip(skip)
       .limit(limit)
       .toArray();
@@ -25,12 +24,12 @@ exports.handler = async function(event, context) {
     const total = await collection.countDocuments({});
     const processedClusters = addImageUrls(clusters);
 
+    // 응답 형식화
     return respond(200, {
       clusters: processedClusters,
       pagination: {
+        ...paginationData,
         total,
-        page,
-        limit,
         totalPages: Math.ceil(total / limit)
       }
     });

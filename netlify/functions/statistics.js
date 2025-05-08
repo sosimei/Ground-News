@@ -17,7 +17,8 @@ async function connectToDB() {
 const headers = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Content-Type': 'application/json' // 응답 헤더에 Content-Type 추가
 };
 
 exports.handler = async function(event, context) {
@@ -34,7 +35,53 @@ exports.handler = async function(event, context) {
     console.log('Statistics API 호출됨:', event.httpMethod, event.path, event.queryStringParameters);
     await connectToDB();
 
-    // 기본 통계
+    // 날짜 필터링 조건 구성
+    const query = {};
+    if (event.queryStringParameters) {
+      const { dateFrom, dateTo, timeframe } = event.queryStringParameters;
+      
+      if (dateFrom || dateTo) {
+        query.created_at = {};
+        if (dateFrom) query.created_at.$gte = new Date(dateFrom);
+        if (dateTo) query.created_at.$lte = new Date(dateTo);
+      } else if (timeframe && timeframe !== 'all') {
+        const now = new Date();
+        query.created_at = { $gte: new Date() };
+        
+        switch (timeframe) {
+          case 'day':
+            query.created_at.$gte = new Date(now.setDate(now.getDate() - 1));
+            break;
+          case 'week':
+            query.created_at.$gte = new Date(now.setDate(now.getDate() - 7));
+            break;
+          case 'month':
+            query.created_at.$gte = new Date(now.setMonth(now.getMonth() - 1));
+            break;
+          case 'year':
+            query.created_at.$gte = new Date(now.setFullYear(now.getFullYear() - 1));
+            break;
+        }
+      }
+    }
+
+    // 필터링된 카운트
+    const filteredTotal = await collection.countDocuments(query);
+    
+    // 필터링된 바이어스 통계
+    const filteredBiasStats = await collection.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: null,
+          left: { $avg: "$bias_ratio.left" },
+          center: { $avg: "$bias_ratio.center" },
+          right: { $avg: "$bias_ratio.right" }
+        }
+      }
+    ]).toArray();
+
+    // 전체 통계
     const total = await collection.countDocuments();
 
     // 바이어스 통계
@@ -91,8 +138,8 @@ exports.handler = async function(event, context) {
         return acc;
       }, {}),
       filtered: {
-        total,
-        biasStats: biasStats[0] || { left: 0, center: 0, right: 0 }
+        total: filteredTotal,
+        biasStats: filteredBiasStats[0] || { left: 0, center: 0, right: 0 }
       }
     };
 

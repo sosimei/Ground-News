@@ -7,7 +7,7 @@ exports.handler = async function(event, context) {
       return respond(200, {});
     }
 
-    // 데이터베이스 연결
+    // 데이터베이스
     const collection = await connectToDB();
     
     // 페이지네이션 데이터 가져오기 (기본값 5개씩)

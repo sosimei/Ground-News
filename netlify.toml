@@ -1,10 +1,10 @@
 [build]
-  base    = "client"         # ← client 폴더는 이 경로에 있습니다
-  publish = "dist"
-  command = "npm run build"  # 실제 배포 전 build 용
+  base    = "."             # ← 프로젝트 루트 디렉토리 사용
+  publish = "client/dist"   # ← client/dist로 경로 수정
+  command = "cd client && npm install && npm run build"  # ← client 디렉토리에서 빌드
 
 [functions]
-  directory = "../netlify/functions"
+  directory = "netlify/functions"  # ← 상대 경로 수정
 
 # 가장 구체적인 경로부터 배치합니다
 # 1. 특정 ID 패턴 (24자리 16진수)에 대한 리디렉션

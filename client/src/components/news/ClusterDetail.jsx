@@ -39,6 +39,7 @@ const ClusterDetail = () => {
             cluster_id: "21",
             title: "미국-한국 무역 협상, 통상 정책 갈등",
             crawl_date: "2024-04-29",
+            thumbnail_url: "/api/images/6819ecbc4b3ccf4f77ccf2ac", // 임시 이미지 ID
             bias_ratio: {
               left: 0.4,
               center: 0.3,
@@ -58,7 +59,8 @@ const ClusterDetail = () => {
               left_article_urls: [
                 "https://www.hani.co.kr/arti/economy/article12345.html",
                 "https://www.khan.co.kr/economy/article67890.html"
-              ]
+              ],
+              thumbnail_url: "/api/images/6819ecbc4b3ccf4f77ccf2aa" // 임시 이미지 ID
             },
             center: {
               summary: "중도 성향 언론은 미국과 한국 간 무역 협상의 쟁점을 균형 있게 다루었습니다. 양국의 이해관계가 충돌하는 부분을 객관적으로 분석하고, 협상 과정에서 발생할 수 있는 다양한 시나리오를 제시했습니다. 관세 문제와 함께 기술 이전, 지적재산권 등 다양한 협상 의제를 포괄적으로 다루었습니다.",
@@ -75,7 +77,8 @@ const ClusterDetail = () => {
                 "https://www.yna.co.kr/view/AKR20250429178200071",
                 "https://www.joongang.co.kr/article/123456",
                 "https://news.kbs.co.kr/news/view.do?ncd=7654321"
-              ]
+              ],
+              thumbnail_url: "/api/images/6819ecbc4b3ccf4f77ccf2ab" // 임시 이미지 ID
             },
             right: {
               summary: "보수 성향 언론은 미국과의 통상 협력 강화 필요성을 강조하고, 한국 기업의 미국 시장 접근성 확대를 위한 전략적 접근을 주문했습니다. 또한 중국과의 관계를 고려한 균형 있는 통상 정책의 중요성을 언급하며, 안보 동맹과 경제 협력을 연계한 포괄적 접근을 제안했습니다.",
@@ -92,7 +95,8 @@ const ClusterDetail = () => {
                 "https://www.chosun.com/economy/article98765.html",
                 "https://www.donga.com/news/article54321.html",
                 "https://www.mk.co.kr/news/article24680.html"
-              ]
+              ],
+              thumbnail_url: "/api/images/6819ecbc4b3ccf4f77ccf2ac" // 임시 이미지 ID
             },
             media_counts: {
               "한겨레": 2,
@@ -176,55 +180,71 @@ const ClusterDetail = () => {
 
   return (
     <div>
-      <div className="card">
-        <div className="cluster-header">
-          <h1 className="cluster-title">{cluster.title}</h1>
-          <span className="cluster-date">{formatDate(cluster.crawl_date)}</span>
-        </div>
-        
-        {cluster.bias_ratio && (
-          <>
-            <div className="bias-distribution">
-              <div 
-                className="bias-left-bar" 
-                style={{ width: `${cluster.bias_ratio.left * 100}%` }}
-              ></div>
-              <div 
-                className="bias-center-bar" 
-                style={{ width: `${cluster.bias_ratio.center * 100}%` }}
-              ></div>
-              <div 
-                className="bias-right-bar" 
-                style={{ width: `${cluster.bias_ratio.right * 100}%` }}
-              ></div>
+      <div className="card cluster-detail-header">
+        <div className="cluster-header-content">
+          {/* 대표 이미지 표시 */}
+          {cluster.thumbnail_url && (
+            <div className="cluster-detail-image">
+              <img 
+                src={cluster.thumbnail_url} 
+                alt={cluster.title} 
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.style.display = 'none';
+                }}
+              />
             </div>
+          )}
+          
+          <div className="cluster-header-info">
+            <h1 className="cluster-title">{cluster.title}</h1>
+            <span className="cluster-date">{formatDate(cluster.crawl_date || cluster.pub_date)}</span>
             
-            <div className="bias-legend">
-              <span>
-                <span className="bias-indicator bias-left">진보</span>
-                {(cluster.bias_ratio.left * 100).toFixed(0)}%
-              </span>
-              <span>
-                <span className="bias-indicator bias-center">중도</span>
-                {(cluster.bias_ratio.center * 100).toFixed(0)}%
-              </span>
-              <span>
-                <span className="bias-indicator bias-right">보수</span>
-                {(cluster.bias_ratio.right * 100).toFixed(0)}%
-              </span>
-            </div>
-          </>
-        )}
-        
-        {cluster.media_counts && (
-          <div>
-            <strong>언론사:</strong> {Object.entries(cluster.media_counts).map(([media, count], index, array) => (
-              <span key={media}>
-                {media} ({count}){index < array.length - 1 ? ', ' : ''}
-              </span>
-            ))}
+            {cluster.bias_ratio && (
+              <>
+                <div className="bias-distribution">
+                  <div 
+                    className="bias-left-bar" 
+                    style={{ width: `${cluster.bias_ratio.left * 100}%` }}
+                  ></div>
+                  <div 
+                    className="bias-center-bar" 
+                    style={{ width: `${cluster.bias_ratio.center * 100}%` }}
+                  ></div>
+                  <div 
+                    className="bias-right-bar" 
+                    style={{ width: `${cluster.bias_ratio.right * 100}%` }}
+                  ></div>
+                </div>
+                
+                <div className="bias-legend">
+                  <span>
+                    <span className="bias-indicator bias-left">진보</span>
+                    {(cluster.bias_ratio.left * 100).toFixed(0)}%
+                  </span>
+                  <span>
+                    <span className="bias-indicator bias-center">중도</span>
+                    {(cluster.bias_ratio.center * 100).toFixed(0)}%
+                  </span>
+                  <span>
+                    <span className="bias-indicator bias-right">보수</span>
+                    {(cluster.bias_ratio.right * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </>
+            )}
+            
+            {cluster.media_counts && (
+              <div>
+                <strong>언론사:</strong> {Object.entries(cluster.media_counts).map(([media, count], index, array) => (
+                  <span key={media}>
+                    {media} ({count}){index < array.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <div className="news-perspectives">
@@ -266,7 +286,21 @@ const ClusterDetail = () => {
         
         <div className="perspective-content">
           {activeTab === 'left' && cluster.left && (
-            <div>
+            <div className="perspective-view">
+              {/* 좌측 관점 이미지 */}
+              {cluster.left.thumbnail_url && (
+                <div className="perspective-image">
+                  <img 
+                    src={cluster.left.thumbnail_url} 
+                    alt="진보 관점 대표 이미지" 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+              
               <div className="perspective-summary">
                 <h3>진보적 관점 요약</h3>
                 <p>{cluster.left.summary}</p>
@@ -285,7 +319,7 @@ const ClusterDetail = () => {
               <div className="perspective-articles">
                 <h3>진보 성향 언론 기사</h3>
                 {cluster.left.press_list && cluster.left.left_article_urls && (
-                  <div>
+                  <div className="article-list">
                     {cluster.left.press_list.map((press, index) => (
                       <div key={index} className="article-item">
                         <div className="article-header">
@@ -306,7 +340,21 @@ const ClusterDetail = () => {
           )}
           
           {activeTab === 'center' && cluster.center && (
-            <div>
+            <div className="perspective-view">
+              {/* 중도 관점 이미지 */}
+              {cluster.center.thumbnail_url && (
+                <div className="perspective-image">
+                  <img 
+                    src={cluster.center.thumbnail_url} 
+                    alt="중도 관점 대표 이미지" 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+              
               <div className="perspective-summary">
                 <h3>중도적 관점 요약</h3>
                 <p>{cluster.center.summary}</p>
@@ -325,7 +373,7 @@ const ClusterDetail = () => {
               <div className="perspective-articles">
                 <h3>중도 성향 언론 기사</h3>
                 {cluster.center.press_list && cluster.center.center_article_urls && (
-                  <div>
+                  <div className="article-list">
                     {cluster.center.press_list.map((press, index) => (
                       <div key={index} className="article-item">
                         <div className="article-header">
@@ -346,7 +394,21 @@ const ClusterDetail = () => {
           )}
           
           {activeTab === 'right' && cluster.right && (
-            <div>
+            <div className="perspective-view">
+              {/* 우측 관점 이미지 */}
+              {cluster.right.thumbnail_url && (
+                <div className="perspective-image">
+                  <img 
+                    src={cluster.right.thumbnail_url} 
+                    alt="보수 관점 대표 이미지" 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+              
               <div className="perspective-summary">
                 <h3>보수적 관점 요약</h3>
                 <p>{cluster.right.summary}</p>
@@ -365,7 +427,7 @@ const ClusterDetail = () => {
               <div className="perspective-articles">
                 <h3>보수 성향 언론 기사</h3>
                 {cluster.right.press_list && cluster.right.right_article_urls && (
-                  <div>
+                  <div className="article-list">
                     {cluster.right.press_list.map((press, index) => (
                       <div key={index} className="article-item">
                         <div className="article-header">
@@ -391,7 +453,7 @@ const ClusterDetail = () => {
               <div className="all-articles">
                 {/* 진보 기사 */}
                 {cluster.left && cluster.left.press_list && cluster.left.left_article_urls && (
-                  <div>
+                  <div className="bias-section">
                     <h4>
                       <span className="bias-indicator bias-left">진보</span> 언론사 기사
                     </h4>
@@ -412,7 +474,7 @@ const ClusterDetail = () => {
                 
                 {/* 중도 기사 */}
                 {cluster.center && cluster.center.press_list && cluster.center.center_article_urls && (
-                  <div>
+                  <div className="bias-section">
                     <h4>
                       <span className="bias-indicator bias-center">중도</span> 언론사 기사
                     </h4>
@@ -433,7 +495,7 @@ const ClusterDetail = () => {
                 
                 {/* 보수 기사 */}
                 {cluster.right && cluster.right.press_list && cluster.right.right_article_urls && (
-                  <div>
+                  <div className="bias-section">
                     <h4>
                       <span className="bias-indicator bias-right">보수</span> 언론사 기사
                     </h4>

@@ -23,14 +23,40 @@ exports.handler = async function(event, context) {
     const query = { };
     
     // 뉴스 클러스터 총 개수
-    const total = await collection.countDocuments(query);
+    let total = 0;
+    try {
+      total = await collection.countDocuments(query);
+      console.log('뉴스 클러스터 총 개수:', total);
+    } catch (err) {
+      console.error('총 개수 조회 오류:', err);
+      total = 0;
+    }
     
     // 뉴스 클러스터 조회
-    let clusters = await collection.find(query)
-      .sort({ created_at: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    let clusters = [];
+    try {
+      clusters = await collection.find(query)
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+      
+      console.log('클러스터 조회 성공, 개수:', clusters.length);
+    } catch (err) {
+      console.error('클러스터 조회 오류:', err);
+      clusters = [];
+    }
+    
+    // 첫 번째 클러스터 로깅 (디버깅용)
+    if (clusters.length > 0) {
+      const first = clusters[0];
+      console.log('첫 번째 클러스터 샘플:');
+      console.log('- ID:', first._id);
+      console.log('- 제목:', first.title);
+      console.log('- 객체 키:', Object.keys(first));
+    } else {
+      console.log('클러스터가 없습니다.');
+    }
     
     // 이미지 URL 추가
     console.log('클러스터 데이터에 이미지 추가 전:', clusters.length);
@@ -47,19 +73,28 @@ exports.handler = async function(event, context) {
       console.log('기사 수:', leftArticles.length + centerArticles.length + rightArticles.length);
     }
     
-    // 기사의 이미지를 가져와서 클러스터에 추가
-    clusters = await addImageUrls(clusters);
-    
-    // 첫 번째 클러스터의 이미지 URL 로깅
-    if (clusters.length > 0) {
-      const sample = clusters[0];
-      console.log('이미지 추가 후 - 썸네일 URL 존재 여부:', sample.thumbnail_url ? '있음' : '없음');
-      console.log('샘플 썸네일 URL:', sample.thumbnail_url || '없음');
+    try {
+      // 기사의 이미지를 가져와서 클러스터에 추가
+      clusters = await addImageUrls(clusters);
+      
+      // 첫 번째 클러스터의 이미지 URL 로깅
+      if (clusters.length > 0) {
+        const sample = clusters[0];
+        console.log('이미지 추가 후 - 썸네일 URL 존재 여부:', sample.thumbnail_url ? '있음' : '없음');
+        console.log('샘플 썸네일 URL:', sample.thumbnail_url || '없음');
+      }
+    } catch (imgErr) {
+      console.error('이미지 URL 추가 오류:', imgErr);
     }
 
     // 응답 생성
     paginationData.total = total;
     const response = formatListResponse(clusters, paginationData);
+    console.log('응답 생성 완료, 형식:', 
+                Object.keys(response), 
+                '데이터:', 
+                response.result ? Object.keys(response.result) : '없음');
+    
     return respond(200, response);
   } catch (error) {
     console.error('clusters-hot.js Error:', error);

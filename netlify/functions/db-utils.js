@@ -16,20 +16,93 @@ async function connectToDB() {
   return clustersCollection;
 }
 
+// 뉴스 원본 컬렉션 가져오기
+async function getNewsRawCollection() {
+  if (!client) {
+    await connectToDB();
+  }
+  return client.db('news_bias').collection('news_raw');
+}
+
 // 이미지 URL 추가 헬퍼 함수
-const addImageUrls = (clusters, isSingleCluster = false) => {
-  const processCluster = (cluster) => {
-    // 클러스터 대표 이미지
+const addImageUrls = async (clusters, isSingleCluster = false) => {
+  // 기사 ID에서 이미지 ID를 가져오는 함수
+  const getImageIdFromArticle = async (articleId) => {
+    try {
+      if (!articleId) return null;
+      
+      const newsRaw = await getNewsRawCollection();
+      const article = await newsRaw.findOne(
+        { _id: articleId.length === 24 ? new ObjectId(articleId) : articleId },
+        { projection: { image_file_id: 1 } }
+      );
+      
+      if (article && article.image_file_id) {
+        return article.image_file_id;
+      }
+    } catch (err) {
+      console.error('기사 이미지 ID 조회 실패:', articleId, err);
+    }
+    return null;
+  };
+  
+  // 클러스터 객체 처리 함수
+  const processCluster = async (cluster) => {
+    console.log(`클러스터 ${cluster._id || 'unknown'} 이미지 처리 시작`);
+    
+    // 클러스터 대표 이미지가 없을 경우, 기사에서 하나 가져옴
+    if (!cluster.image_file_id) {
+      let foundImageId = null;
+      
+      // 첫 번째 가능한 기사에서 이미지 찾기
+      const perspectives = ['left', 'center', 'right'];
+      for (const perspective of perspectives) {
+        if (cluster[perspective]) {
+          const articleIds = cluster[perspective][`${perspective}_article_ids`] || [];
+          if (articleIds.length > 0) {
+            // 첫 번째 기사에서 이미지 ID 가져오기 시도
+            foundImageId = await getImageIdFromArticle(articleIds[0]);
+            if (foundImageId) {
+              console.log(`클러스터 ${cluster._id}의 대표 이미지를 ${perspective} 기사에서 찾음:`, foundImageId);
+              cluster.image_file_id = foundImageId;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    // 대표 이미지 URL 설정
     if (cluster.image_file_id) {
       cluster.thumbnail_url = `/api/images/${cluster.image_file_id}`;
+      console.log(`클러스터 ${cluster._id}에 대표 이미지 URL 설정됨:`, cluster.thumbnail_url);
+    } else {
+      console.log(`클러스터 ${cluster._id}에 대표 이미지 없음`);
     }
     
     // 각 정치적 관점별 대표 이미지 추가
-    ['left', 'center', 'right'].forEach(perspective => {
+    for (const perspective of ['left', 'center', 'right']) {
       if (cluster[perspective]) {
-        // 관점별 대표 이미지가 있다면 URL 추가
+        // 관점별 대표 이미지가 없을 경우, 첫 번째 기사 이미지 사용
+        if (!cluster[perspective].image_file_id) {
+          const articleIds = cluster[perspective][`${perspective}_article_ids`] || [];
+          if (articleIds.length > 0) {
+            const perspectiveImageId = await getImageIdFromArticle(articleIds[0]);
+            if (perspectiveImageId) {
+              cluster[perspective].image_file_id = perspectiveImageId;
+              console.log(`${perspective} 관점 이미지 ID 설정됨:`, perspectiveImageId);
+            }
+          }
+        }
+        
+        // 관점별 대표 이미지 URL 설정
         if (cluster[perspective].image_file_id) {
           cluster[perspective].thumbnail_url = `/api/images/${cluster[perspective].image_file_id}`;
+          console.log(`${perspective} 관점 이미지 URL 설정됨:`, cluster[perspective].thumbnail_url);
+        } else if (cluster.image_file_id) {
+          // 관점별 이미지가 없으면 클러스터 대표 이미지 사용
+          cluster[perspective].thumbnail_url = cluster.thumbnail_url;
+          console.log(`${perspective} 관점 이미지 없음, 클러스터 대표 이미지 사용`);
         }
         
         // 관점별 기사 이미지 URL 추가
@@ -39,13 +112,14 @@ const addImageUrls = (clusters, isSingleCluster = false) => {
             article_id: id,
             thumbnail_url: `/api/images/article/${id}`
           }));
+          console.log(`${perspective} 관점 기사 썸네일 ${articleIds.length}개 추가됨`);
         }
       }
-    });
+    }
     
     // 디버그용 로그 추가
     if (isSingleCluster) {
-      console.log('addImageUrls 단일 클러스터 처리:', 
+      console.log('클러스터 이미지 처리 완료:', 
         cluster.thumbnail_url ? '메인 이미지 있음' : '메인 이미지 없음',
         cluster.left?.thumbnail_url ? '좌 이미지 있음' : '좌 이미지 없음',
         cluster.center?.thumbnail_url ? '중 이미지 있음' : '중 이미지 없음',
@@ -56,13 +130,24 @@ const addImageUrls = (clusters, isSingleCluster = false) => {
     return cluster;
   };
   
-  // 단일 클러스터인 경우
-  if (isSingleCluster) {
-    return processCluster(clusters);
+  try {
+    // 단일 클러스터인 경우
+    if (isSingleCluster) {
+      return await processCluster(clusters);
+    }
+    
+    // 클러스터 배열인 경우
+    const processedClusters = [];
+    for (const cluster of clusters) {
+      const processed = await processCluster(cluster);
+      processedClusters.push(processed);
+    }
+    return processedClusters;
+  } catch (error) {
+    console.error('이미지 URL 추가 중 오류:', error);
+    // 오류가 발생해도 원래 클러스터 반환
+    return isSingleCluster ? clusters : (Array.isArray(clusters) ? clusters : []);
   }
-  
-  // 클러스터 배열인 경우
-  return clusters.map(processCluster);
 };
 
 // 응답 헬퍼 함수
@@ -206,6 +291,7 @@ const formatErrorResponse = (errorMessage, errorCode = "ERROR400") => {
 
 module.exports = {
   connectToDB,
+  getNewsRawCollection,
   addImageUrls,
   respond,
   ObjectId,

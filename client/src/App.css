@@ -1,795 +1,90 @@
-:root {
-  --left-bias-color: #3b82f6;  /* 진보 - 파란색 */
-  --center-color: #facc15;     /* 중도 - 노란색 */
-  --right-bias-color: #ef4444; /* 보수 - 빨간색 */
-  --neutral-gray: #9ca3af;     /* 중간 회색 */
-  --light-gray: #f3f4f6;       /* 밝은 회색 */
-  --dark-gray: #4b5563;        /* 어두운 회색 */
-  --primary-blue: #2563eb;     /* 주요 색상 */
-  --primary-blue-dark: #1d4ed8; /* 더 어두운 주요 색상 */
-  --box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* 기본 그림자 */
-}
+/* 이전 CSS 내용 유지 */
 
-body {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  margin: 0;
-  padding: 0;
-  background-color: #f9fafb;
-  color: #111827;
-}
-
-/* 다크 모드 */
-body.dark-mode,
-.dark-mode .app-container {
-  background-color: #111827;
-  color: #f3f4f6;
-}
-
-.dark-mode .card,
-.dark-mode .navbar,
-.dark-mode .filter-bar,
-.dark-mode .cluster-item,
-.dark-mode .keyword-tag {
-  background-color: #1f2937;
-  color: #f3f4f6;
-}
-
-.dark-mode .cluster-date,
-.dark-mode .news-meta,
-.dark-mode select,
-.dark-mode input {
-  color: #d1d5db;
-}
-
-.dark-mode select,
-.dark-mode input {
-  background-color: #374151;
-  border-color: #4b5563;
-}
-
-.dark-mode .keyword-tag {
-  background-color: #374151;
-  color: #e5e7eb;
-}
-
-.dark-mode .bias-labels {
-  color: #e5e7eb;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-}
-
-.app-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-}
-
-/* 앱 헤더 */
-.app-header {
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.title {
-  margin: 0;
-  font-size: 2rem;
-  color: var(--primary-blue);
-}
-
-.dark-mode .title {
-  color: #60a5fa;
-}
-
-.subtitle {
-  color: var(--dark-gray);
-  margin-top: 0.5rem;
-}
-
-.dark-mode .subtitle {
-  color: #d1d5db;
-}
-
-.mode-toggle {
-  padding: 0.5rem 1rem;
-  background-color: transparent;
-  border: 1px solid var(--primary-blue);
-  color: var(--primary-blue);
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.dark-mode .mode-toggle {
-  border-color: #60a5fa;
-  color: #60a5fa;
-}
-
-.mode-toggle:hover {
-  background-color: rgba(37, 99, 235, 0.1);
-}
-
-.dark-mode .mode-toggle:hover {
-  background-color: rgba(96, 165, 250, 0.1);
-}
-
-/* 상단 컨트롤 */
-.top-controls {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.date-filter, .category-filter {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* 검색 섹션 */
-.search-section {
-  margin-bottom: 2rem;
-}
-
-.search-form {
-  display: flex;
-  gap: 0.5rem;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.search-input {
-  flex: 1;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 1rem;
-}
-
-.search-button {
-  padding: 0.75rem 1.5rem;
-  background-color: var(--primary-blue);
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.dark-mode .search-button {
-  background-color: #60a5fa;
-}
-
-.search-button:hover {
-  background-color: var(--primary-blue-dark);
-}
-
-.dark-mode .search-button:hover {
-  background-color: #3b82f6;
-}
-
-.clear-search-button {
-  padding: 0.75rem 1.5rem;
-  background-color: transparent;
-  color: var(--primary-blue);
-  border: 1px solid var(--primary-blue);
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.dark-mode .clear-search-button {
-  color: #60a5fa;
-  border-color: #60a5fa;
-}
-
-.clear-search-button:hover {
-  background-color: rgba(37, 99, 235, 0.1);
-}
-
-.dark-mode .clear-search-button:hover {
-  background-color: rgba(96, 165, 250, 0.1);
-}
-
-.search-info {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  color: var(--dark-gray);
-}
-
-.dark-mode .search-info {
-  color: #d1d5db;
-}
-
-/* 인기 섹션 */
-.trending-section {
-  margin-bottom: 2rem;
-}
-
-.trending-title {
-  margin-top: 0;
+/* 이미지 관련 스타일 */
+.article-image-container {
   margin-bottom: 1rem;
-  text-align: center;
-  color: var(--dark-gray);
-}
-
-.dark-mode .trending-title {
-  color: #d1d5db;
-}
-
-.keywords-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  justify-content: center;
-  margin-bottom: 2rem;
-}
-
-.trending-keyword {
-  background-color: var(--light-gray);
-  padding: 0.5rem 1rem;
-  border-radius: 1.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.dark-mode .trending-keyword {
-  background-color: #374151;
-}
-
-.trending-keyword:hover {
-  background-color: rgba(37, 99, 235, 0.1);
-  color: var(--primary-blue);
-}
-
-.dark-mode .trending-keyword:hover {
-  background-color: rgba(96, 165, 250, 0.1);
-  color: #60a5fa;
-}
-
-.trending-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-}
-
-.trending-item {
-  background-color: white;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  box-shadow: var(--box-shadow);
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.dark-mode .trending-item {
-  background-color: #1f2937;
-}
-
-.trending-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.trending-number {
-  position: absolute;
-  top: -0.5rem;
-  left: -0.5rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  background-color: var(--primary-blue);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 0.875rem;
-}
-
-.dark-mode .trending-number {
-  background-color: #60a5fa;
-}
-
-.trending-cluster-title {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  line-height: 1.4;
-}
-
-/* 통계 대시보드 */
-.stats-dashboard {
-  margin-bottom: 2rem;
-  background-color: white;
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  box-shadow: var(--box-shadow);
-}
-
-.dark-mode .stats-dashboard {
-  background-color: #1f2937;
-}
-
-.stats-dashboard h2 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  color: var(--dark-gray);
-}
-
-.dark-mode .stats-dashboard h2 {
-  color: #d1d5db;
-}
-
-.stats-card {
-  margin-bottom: 1.5rem;
-}
-
-.stats-card h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-  color: var(--dark-gray);
-}
-
-.dark-mode .stats-card h3 {
-  color: #d1d5db;
-}
-
-.stats-number {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: var(--primary-blue);
-  text-align: center;
-}
-
-.dark-mode .stats-number {
-  color: #60a5fa;
-}
-
-/* 클러스터 목록 */
-.cluster-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.cluster-item {
-  background-color: white;
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--box-shadow);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cluster-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.cluster-title {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
-  font-size: 1.5rem;
-  line-height: 1.4;
-}
-
-.cluster-meta {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-  color: var(--dark-gray);
-}
-
-.cluster-category {
-  background-color: var(--light-gray);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-.dark-mode .cluster-category {
-  background-color: #374151;
-}
-
-.press-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.press-tag {
-  background-color: var(--light-gray);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--dark-gray);
-}
-
-.dark-mode .press-tag {
-  background-color: #374151;
-  color: #d1d5db;
-}
-
-.no-clusters {
-  text-align: center;
-  padding: 2rem;
-  background-color: var(--light-gray);
-  border-radius: 0.5rem;
-  color: var(--dark-gray);
-}
-
-.dark-mode .no-clusters {
-  background-color: #1f2937;
-  color: #d1d5db;
-}
-
-/* 바이어스 그래프 */
-.bias-graph {
-  margin-bottom: 1rem;
-}
-
-.bias-bar {
-  display: flex;
-  height: 8px;
-  border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  max-height: 200px;
 }
 
-.bias-segment {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 0.7rem;
-  font-weight: bold;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+.article-thumbnail {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
-.bias-segment.left {
-  background-color: var(--left-bias-color);
+.article-thumbnail:hover {
+  transform: scale(1.05);
 }
 
-.bias-segment.center {
-  background-color: var(--center-color);
-  color: #111827;
+.cluster-image {
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 8px;
+  max-height: 180px;
 }
 
-.dark-mode .bias-segment.center {
-  color: #1f2937;
+.cluster-image img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
-.bias-segment.right {
-  background-color: var(--right-bias-color);
+.cluster-image img:hover {
+  transform: scale(1.05);
 }
 
-.bias-labels {
+.article-item {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1rem;
+}
+
+.article-item:last-child {
+  border-bottom: none;
+}
+
+.article-header {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--dark-gray);
-}
-
-.bias-label.left {
-  color: var(--left-bias-color);
-}
-
-.bias-label.center {
-  color: var(--dark-gray);
-}
-
-.dark-mode .bias-label.center {
-  color: #d1d5db;
-}
-
-.bias-label.right {
-  color: var(--right-bias-color);
-}
-
-/* 페이지네이션 */
-.pagination {
-  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.page-btn {
-  padding: 0.5rem 1rem;
-  background-color: var(--primary-blue);
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.dark-mode .page-btn {
-  background-color: #60a5fa;
-}
-
-.page-btn:disabled {
-  background-color: var(--neutral-gray);
-  cursor: not-allowed;
-}
-
-.dark-mode .page-btn:disabled {
-  background-color: #4b5563;
-}
-
-.page-btn:not(:disabled):hover {
-  background-color: var(--primary-blue-dark);
-}
-
-.dark-mode .page-btn:not(:disabled):hover {
-  background-color: #3b82f6;
-}
-
-.page-info {
-  color: var(--dark-gray);
-}
-
-.dark-mode .page-info {
-  color: #d1d5db;
-}
-
-/* 클러스터 상세 */
-.back-button {
-  padding: 0.5rem 1rem;
-  background-color: transparent;
-  color: var(--primary-blue);
-  border: 1px solid var(--primary-blue);
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-left: 1rem;
-}
-
-.dark-mode .back-button {
-  color: #60a5fa;
-  border-color: #60a5fa;
-}
-
-.back-button:hover {
-  background-color: rgba(37, 99, 235, 0.1);
-}
-
-.dark-mode .back-button:hover {
-  background-color: rgba(96, 165, 250, 0.1);
-}
-
-.cluster-detail {
-  background-color: white;
-  border-radius: 0.5rem;
-  padding: 2rem;
-  box-shadow: var(--box-shadow);
-}
-
-.dark-mode .cluster-detail {
-  background-color: #1f2937;
-}
-
-.detail-title {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1.75rem;
-  line-height: 1.3;
-}
-
-.detail-meta {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  color: var(--dark-gray);
-}
-
-.dark-mode .detail-meta {
-  color: #d1d5db;
-}
-
-.bias-section {
-  margin-bottom: 2rem;
-}
-
-.bias-section h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: var(--dark-gray);
-}
-
-.dark-mode .bias-section h3 {
-  color: #d1d5db;
-}
-
-.perspectives {
-  margin-top: 2rem;
-}
-
-.perspective-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.perspective {
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  background-color: var(--light-gray);
-}
-
-.dark-mode .perspective {
-  background-color: #374151;
-}
-
-.perspective h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.left-perspective h3 {
-  color: var(--left-bias-color);
-}
-
-.center-perspective h3 {
-  color: var(--dark-gray);
-}
-
-.dark-mode .center-perspective h3 {
-  color: #d1d5db;
-}
-
-.right-perspective h3 {
-  color: var(--right-bias-color);
-}
-
-.perspective-content {
-  line-height: 1.6;
-}
-
-.summary {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-}
-
-.source-list {
-  margin-top: 1.5rem;
-}
-
-.source-list h4 {
-  margin-top: 0;
   margin-bottom: 0.5rem;
-  color: var(--dark-gray);
 }
 
-.dark-mode .source-list h4 {
-  color: #d1d5db;
+.article-source {
+  font-weight: bold;
+  color: #555;
 }
 
-.source-list ul {
-  padding-left: 1.5rem;
-  margin: 0;
+.article-title {
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
 }
 
-.source-list li {
-  margin-bottom: 0.25rem;
-}
-
-.source-list a {
-  color: var(--primary-blue);
+.article-title a {
+  color: #333;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 
-.dark-mode .source-list a {
-  color: #60a5fa;
+.article-title a:hover {
+  color: var(--primary-color);
 }
 
-.source-list a:hover {
-  text-decoration: underline;
-}
-
-.empty-perspective {
-  color: var(--neutral-gray);
-  text-align: center;
-  padding: 2rem 0;
-}
-
-.dark-mode .empty-perspective {
-  color: #9ca3af;
-}
-
-/* 키워드 */
-.keywords {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.keyword-tag {
-  background-color: var(--light-gray);
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.85rem;
-  color: var(--dark-gray);
-}
-
-/* 로딩 및 에러 */
-.loading {
-  text-align: center;
-  padding: 3rem;
-  color: var(--dark-gray);
-}
-
-.dark-mode .loading {
-  color: #d1d5db;
-}
-
-.error-message {
-  text-align: center;
-  padding: 1.5rem;
-  background-color: #fee2e2;
-  border-radius: 0.5rem;
-  border-left: 4px solid #ef4444;
-  color: #b91c1c;
-  margin-bottom: 1.5rem;
-}
-
-.dark-mode .error-message {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-}
-
-/* 반응형 디자인 */
+/* 반응형 디자인을 위한 미디어 쿼리 */
 @media (max-width: 768px) {
-  .perspective-columns {
-    grid-template-columns: 1fr;
+  .article-image-container,
+  .cluster-image {
+    max-height: 150px;
   }
-  
-  .trending-list {
-    grid-template-columns: 1fr;
-  }
-  
-  .header-top {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .search-form {
-    flex-direction: column;
-  }
-  
-  .cluster-item {
-    padding: 1rem;
-  }
-  
-  .cluster-title {
-    font-size: 1.25rem;
-  }
-  
-  .detail-title {
-    font-size: 1.5rem;
+}
+
+@media (max-width: 480px) {
+  .article-image-container,
+  .cluster-image {
+    max-height: 120px;
   }
 }

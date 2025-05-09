@@ -1,31 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import apiService from '../../utils/api';
+import ArticleList from './ArticleList';
 
 const ClusterDetail = () => {
   const { clusterId } = useParams();
   const [cluster, setCluster] = useState(null);
+  const [articles, setArticles] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchClusterDetail = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
         
         try {
-          // 실제 API 호출
-          const response = await apiService.clusters.getById(clusterId);
-          setCluster(response.data);
+          // 클러스터 정보 가져오기
+          const clusterResponse = await apiService.clusters.getById(clusterId);
+          setCluster(clusterResponse.data);
+          
+          // 클러스터에 속한 기사 정보 가져오기
+          const articlesResponse = await apiService.articles.getByClusterId(clusterId);
+          setArticles(articlesResponse.data.articles || []);
           
           // 탭 초기값 설정 - 컨텐츠가 있는 탭으로 설정
-          if (response.data.left && response.data.left.summary) {
+          if (clusterResponse.data.left && clusterResponse.data.left.summary) {
             setActiveTab('left');
-          } else if (response.data.center && response.data.center.summary) {
+          } else if (clusterResponse.data.center && clusterResponse.data.center.summary) {
             setActiveTab('center');
-          } else if (response.data.right && response.data.right.summary) {
+          } else if (clusterResponse.data.right && clusterResponse.data.right.summary) {
             setActiveTab('right');
           } else {
             setActiveTab('all');
@@ -130,7 +136,7 @@ const ClusterDetail = () => {
       }
     };
 
-    fetchClusterDetail();
+    fetchData();
   }, [clusterId]);
 
   // 탭 변경 핸들러
@@ -146,6 +152,27 @@ const ClusterDetail = () => {
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  // 기사 아이디로 기사 정보 찾기
+  const findArticlesById = (articleIds) => {
+    if (!articleIds || !Array.isArray(articleIds) || articles.length === 0) {
+      return [];
+    }
+    return articleIds.map(id => articles.find(article => article._id.toString() === id));
+  };
+
+  // 기사 관련 정보 추출하기
+  const getArticleInfo = (articleGroup, articleIds, articleUrls) => {
+    // 실제 기사 정보가 있으면 그것을 사용하고, 없으면 기본값 사용
+    const matchedArticles = findArticlesById(articleIds);
+    
+    return {
+      press: articleGroup.press_list || [],
+      urls: articleUrls || [],
+      titles: matchedArticles.map(article => article?.title || ''),
+      imageIds: matchedArticles.map(article => article?.image_file_id || null)
+    };
   };
 
   if (loading) {
@@ -283,23 +310,15 @@ const ClusterDetail = () => {
               </div>
               
               <div className="perspective-articles">
-                <h3>진보 성향 언론 기사</h3>
                 {cluster.left.press_list && cluster.left.left_article_urls && (
-                  <div>
-                    {cluster.left.press_list.map((press, index) => (
-                      <div key={index} className="article-item">
-                        <div className="article-header">
-                          <span className="article-source">{press}</span>
-                        </div>
-                        <h4 className="article-title">
-                          <a href={cluster.left.left_article_urls[index]} target="_blank" rel="noopener noreferrer">
-                            {/* 실제 구현 시 기사 제목 정보 필요 */}
-                            {cluster.title} - {press} 기사
-                          </a>
-                        </h4>
-                      </div>
-                    ))}
-                  </div>
+                  <ArticleList 
+                    {...getArticleInfo(
+                      cluster.left, 
+                      cluster.left.left_article_ids, 
+                      cluster.left.left_article_urls
+                    )} 
+                    bias="left" 
+                  />
                 )}
               </div>
             </div>
@@ -323,23 +342,15 @@ const ClusterDetail = () => {
               </div>
               
               <div className="perspective-articles">
-                <h3>중도 성향 언론 기사</h3>
                 {cluster.center.press_list && cluster.center.center_article_urls && (
-                  <div>
-                    {cluster.center.press_list.map((press, index) => (
-                      <div key={index} className="article-item">
-                        <div className="article-header">
-                          <span className="article-source">{press}</span>
-                        </div>
-                        <h4 className="article-title">
-                          <a href={cluster.center.center_article_urls[index]} target="_blank" rel="noopener noreferrer">
-                            {/* 실제 구현 시 기사 제목 정보 필요 */}
-                            {cluster.title} - {press} 기사
-                          </a>
-                        </h4>
-                      </div>
-                    ))}
-                  </div>
+                  <ArticleList 
+                    {...getArticleInfo(
+                      cluster.center,
+                      cluster.center.center_article_ids,
+                      cluster.center.center_article_urls
+                    )}
+                    bias="center" 
+                  />
                 )}
               </div>
             </div>
@@ -363,23 +374,15 @@ const ClusterDetail = () => {
               </div>
               
               <div className="perspective-articles">
-                <h3>보수 성향 언론 기사</h3>
                 {cluster.right.press_list && cluster.right.right_article_urls && (
-                  <div>
-                    {cluster.right.press_list.map((press, index) => (
-                      <div key={index} className="article-item">
-                        <div className="article-header">
-                          <span className="article-source">{press}</span>
-                        </div>
-                        <h4 className="article-title">
-                          <a href={cluster.right.right_article_urls[index]} target="_blank" rel="noopener noreferrer">
-                            {/* 실제 구현 시 기사 제목 정보 필요 */}
-                            {cluster.title} - {press} 기사
-                          </a>
-                        </h4>
-                      </div>
-                    ))}
-                  </div>
+                  <ArticleList 
+                    {...getArticleInfo(
+                      cluster.right,
+                      cluster.right.right_article_ids,
+                      cluster.right.right_article_urls
+                    )}
+                    bias="right" 
+                  />
                 )}
               </div>
             </div>
@@ -392,63 +395,42 @@ const ClusterDetail = () => {
                 {/* 진보 기사 */}
                 {cluster.left && cluster.left.press_list && cluster.left.left_article_urls && (
                   <div>
-                    <h4>
-                      <span className="bias-indicator bias-left">진보</span> 언론사 기사
-                    </h4>
-                    {cluster.left.press_list.map((press, index) => (
-                      <div key={`left-${index}`} className="article-item">
-                        <div className="article-header">
-                          <span className="article-source">{press}</span>
-                        </div>
-                        <h4 className="article-title">
-                          <a href={cluster.left.left_article_urls[index]} target="_blank" rel="noopener noreferrer">
-                            {cluster.title} - {press} 기사
-                          </a>
-                        </h4>
-                      </div>
-                    ))}
+                    <ArticleList 
+                      {...getArticleInfo(
+                        cluster.left,
+                        cluster.left.left_article_ids,
+                        cluster.left.left_article_urls
+                      )}
+                      bias="left"
+                    />
                   </div>
                 )}
                 
                 {/* 중도 기사 */}
                 {cluster.center && cluster.center.press_list && cluster.center.center_article_urls && (
                   <div>
-                    <h4>
-                      <span className="bias-indicator bias-center">중도</span> 언론사 기사
-                    </h4>
-                    {cluster.center.press_list.map((press, index) => (
-                      <div key={`center-${index}`} className="article-item">
-                        <div className="article-header">
-                          <span className="article-source">{press}</span>
-                        </div>
-                        <h4 className="article-title">
-                          <a href={cluster.center.center_article_urls[index]} target="_blank" rel="noopener noreferrer">
-                            {cluster.title} - {press} 기사
-                          </a>
-                        </h4>
-                      </div>
-                    ))}
+                    <ArticleList 
+                      {...getArticleInfo(
+                        cluster.center,
+                        cluster.center.center_article_ids,
+                        cluster.center.center_article_urls
+                      )}
+                      bias="center"
+                    />
                   </div>
                 )}
                 
                 {/* 보수 기사 */}
                 {cluster.right && cluster.right.press_list && cluster.right.right_article_urls && (
                   <div>
-                    <h4>
-                      <span className="bias-indicator bias-right">보수</span> 언론사 기사
-                    </h4>
-                    {cluster.right.press_list.map((press, index) => (
-                      <div key={`right-${index}`} className="article-item">
-                        <div className="article-header">
-                          <span className="article-source">{press}</span>
-                        </div>
-                        <h4 className="article-title">
-                          <a href={cluster.right.right_article_urls[index]} target="_blank" rel="noopener noreferrer">
-                            {cluster.title} - {press} 기사
-                          </a>
-                        </h4>
-                      </div>
-                    ))}
+                    <ArticleList 
+                      {...getArticleInfo(
+                        cluster.right,
+                        cluster.right.right_article_ids,
+                        cluster.right.right_article_urls
+                      )}
+                      bias="right"
+                    />
                   </div>
                 )}
               </div>

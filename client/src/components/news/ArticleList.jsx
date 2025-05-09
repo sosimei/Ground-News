@@ -1,7 +1,8 @@
 import React from 'react';
+import apiService from '../../utils/api';
 
 // 기사 목록을 표시하는 컴포넌트
-const ArticleList = ({ articles, press, urls, bias }) => {
+const ArticleList = ({ articles, press, urls, bias, titles = [], imageIds = [] }) => {
   // 기사 데이터가 없으면 아무것도 표시하지 않음
   if (!press || !urls || press.length === 0 || urls.length === 0) {
     return (
@@ -38,6 +39,11 @@ const ArticleList = ({ articles, press, urls, bias }) => {
         return '알 수 없음';
     }
   };
+
+  // 이미지 URL 생성
+  const getImageUrl = (imageId) => {
+    return apiService.images.getImageUrl(imageId);
+  };
   
   return (
     <div className="article-list">
@@ -53,10 +59,24 @@ const ArticleList = ({ articles, press, urls, bias }) => {
           <div className="article-header">
             <span className="article-source">{media}</span>
           </div>
+          
+          {imageIds && imageIds[index] && (
+            <div className="article-image-container">
+              <img 
+                src={getImageUrl(imageIds[index])} 
+                alt={titles[index] || `${media} 관련 이미지`}
+                className="article-thumbnail"
+                onError={(e) => {
+                  console.error("이미지 로드 실패:", e);
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+          
           <h4 className="article-title">
             <a href={urls[index]} target="_blank" rel="noopener noreferrer">
-              {/* 실제 구현 시 기사 제목 정보가 필요 */}
-              {media} 기사 보기
+              {titles && titles[index] ? titles[index] : `${media} 기사 보기`}
             </a>
           </h4>
         </div>

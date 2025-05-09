@@ -11,29 +11,24 @@
 [functions]
   directory    = "netlify/functions"
   node_bundler = "esbuild"
+  included_files = ["netlify/functions/**/*.js"]
   # 타임아웃은 Netlify 대시보드에서 직접 설정됩니다 (최소 26초 이상 권장)
 
-# 개별 함수 설정
-[[redirects]]
-  from = "/.netlify/functions/debug-auth"
-  to = "/.netlify/functions/debug-auth"
-  status = 200
-  force = true
-  included_files = ["netlify/functions/utils/*.js"]
+# 개별 함수 패턴 설정
+[[plugins]]
+  package = "@netlify/plugin-functions-core"
 
-[[redirects]]
-  from = "/.netlify/functions/refresh-token"
-  to = "/.netlify/functions/refresh-token"
-  status = 200
-  force = true
-  included_files = ["netlify/functions/utils/*.js", "netlify/functions/models/*.js"]
+[[edge_functions]]
+  path = "/api/debug-auth"
+  function = "debug-auth"
 
-[[redirects]]
-  from = "/.netlify/functions/me"
-  to = "/.netlify/functions/me"
-  status = 200
-  force = true
-  included_files = ["netlify/functions/utils/*.js", "netlify/functions/models/*.js"]
+[[edge_functions]]
+  path = "/api/refresh-token"
+  function = "refresh-token"
+
+[[edge_functions]]
+  path = "/api/me"
+  function = "me"
 
 [build.environment]
   SITE_URL     = "https://polireviewer.netlify.app"

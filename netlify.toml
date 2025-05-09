@@ -7,7 +7,20 @@
   directory = "../netlify/functions"
 
 # 가장 구체적인 경로부터 배치합니다
-# 1. 특정 ID 패턴 (24자리 16진수)에 대한 리디렉션
+# 1. 이미지 API 엔드포인트
+[[redirects]]
+  from = "/api/images/:id"
+  to = "/.netlify/functions/get-image/:id"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/images/article/:id"
+  to = "/.netlify/functions/get-article-image/:id"
+  status = 200
+  force = true
+
+# 2. 특정 ID 패턴 (24자리 16진수)에 대한 리디렉션
 [[redirects]]
   from = "/clusters/hot/:id(^[0-9a-fA-F]{24}$)"
   to = "/.netlify/functions/clusters-hot-id/:id"
@@ -20,7 +33,7 @@
   status = 200
   force = true
 
-# 2. 카테고리 패턴에 대한 리디렉션
+# 3. 카테고리 패턴에 대한 리디렉션
 [[redirects]]
   from = "/clusters/hot/:category"
   to = "/.netlify/functions/clusters-hot-category/:category"
@@ -33,7 +46,7 @@
   status = 200
   force = true
 
-# 3. 기본 API 엔드포인트
+# 4. 기본 API 엔드포인트
 [[redirects]]
   from = "/clusters/hot"
   to = "/.netlify/functions/clusters-hot"
@@ -44,13 +57,13 @@
   to = "/.netlify/functions/clusters-latest"
   status = 200
 
-# 4. 통계 API
+# 5. 통계 API
 [[redirects]]
   from = "/api/statistics"
   to = "/.netlify/functions/statistics"
   status = 200
 
-# 5. additional.js 파일이 처리하는 API 경로들
+# 6. additional.js 파일이 처리하는 API 경로들
 [[redirects]]
   from = "/api/dates"
   to = "/.netlify/functions/additional"
@@ -79,13 +92,13 @@
   [redirects.query]
     path = "trending"
 
-# 6. 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
+# 7. 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-# 7. SPA를 위한 리디렉션
+# 8. SPA를 위한 리디렉션
 [[redirects]]
   from = "/*"
   to = "/index.html"

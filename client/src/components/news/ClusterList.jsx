@@ -198,53 +198,71 @@ const ClusterList = () => {
         <div>
           {clusters.map((cluster) => (
             <div key={cluster._id} className="card news-cluster">
-              <div className="cluster-header">
-                <h3 className="cluster-title">
-                  <Link to={`/news/${cluster._id}`}>{cluster.title}</Link>
-                </h3>
-                <span className="cluster-date">{formatDate(cluster.crawl_date)}</span>
-              </div>
-              
-              <div className="bias-distribution">
-                <div 
-                  className="bias-left-bar" 
-                  style={{ width: `${cluster.bias_ratio.left * 100}%` }}
-                ></div>
-                <div 
-                  className="bias-center-bar" 
-                  style={{ width: `${cluster.bias_ratio.center * 100}%` }}
-                ></div>
-                <div 
-                  className="bias-right-bar" 
-                  style={{ width: `${cluster.bias_ratio.right * 100}%` }}
-                ></div>
-              </div>
-              
-              <div className="bias-legend">
-                <span>
-                  <span className="bias-indicator bias-left">진보</span>
-                  {(cluster.bias_ratio.left * 100).toFixed(0)}%
-                </span>
-                <span>
-                  <span className="bias-indicator bias-center">중도</span>
-                  {(cluster.bias_ratio.center * 100).toFixed(0)}%
-                </span>
-                <span>
-                  <span className="bias-indicator bias-right">보수</span>
-                  {(cluster.bias_ratio.right * 100).toFixed(0)}%
-                </span>
-              </div>
-              
-              <div>
-                <strong>언론사:</strong> {Object.entries(cluster.media_counts).map(([media, count], index, array) => (
-                  <span key={media}>
-                    {media} ({count}){index < array.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
-              </div>
-              
-              <div style={{ marginTop: '1rem' }}>
-                <Link to={`/news/${cluster._id}`} className="btn">자세히 보기</Link>
+              <div className="cluster-content">
+                {/* 이미지 표시 영역 추가 */}
+                {cluster.thumbnail_url && (
+                  <div className="cluster-image">
+                    <img 
+                      src={cluster.thumbnail_url} 
+                      alt={cluster.title} 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+                
+                <div className="cluster-details">
+                  <div className="cluster-header">
+                    <h3 className="cluster-title">
+                      <Link to={`/news/${cluster._id}`}>{cluster.title}</Link>
+                    </h3>
+                    <span className="cluster-date">{formatDate(cluster.pub_date || cluster.crawl_date)}</span>
+                  </div>
+                  
+                  <div className="bias-distribution">
+                    <div 
+                      className="bias-left-bar" 
+                      style={{ width: `${cluster.bias_ratio.left * 100}%` }}
+                    ></div>
+                    <div 
+                      className="bias-center-bar" 
+                      style={{ width: `${cluster.bias_ratio.center * 100}%` }}
+                    ></div>
+                    <div 
+                      className="bias-right-bar" 
+                      style={{ width: `${cluster.bias_ratio.right * 100}%` }}
+                    ></div>
+                  </div>
+                  
+                  <div className="bias-legend">
+                    <span>
+                      <span className="bias-indicator bias-left">진보</span>
+                      {(cluster.bias_ratio.left * 100).toFixed(0)}%
+                    </span>
+                    <span>
+                      <span className="bias-indicator bias-center">중도</span>
+                      {(cluster.bias_ratio.center * 100).toFixed(0)}%
+                    </span>
+                    <span>
+                      <span className="bias-indicator bias-right">보수</span>
+                      {(cluster.bias_ratio.right * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <strong>언론사:</strong> {Object.entries(cluster.media_counts || {}).map(([media, count], index, array) => (
+                      <span key={media}>
+                        {media} ({count}){index < array.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                  
+                  <div style={{ marginTop: '1rem' }}>
+                    <Link to={`/news/${cluster._id}`} className="btn">자세히 보기</Link>
+                  </div>
+                </div>
               </div>
             </div>
           ))}

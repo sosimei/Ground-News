@@ -2,7 +2,6 @@ const express = require('express');
 const serverless = require('serverless-http');
 const cors = require('cors');
 const path = require('path');
-const imagesRoutes = require('../../server/routes/images');
 const articlesRoutes = require('../../server/routes/articles');
 // 다른 라우트들도 필요하면 import
 
@@ -13,7 +12,6 @@ app.use(cors());
 app.use(express.json());
 
 // API 라우트 설정
-app.use('/.netlify/functions/api/images', imagesRoutes);
 app.use('/.netlify/functions/api/articles', articlesRoutes);
 // 다른 라우트들도 필요하면 추가
 

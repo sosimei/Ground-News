@@ -12,6 +12,7 @@ async function connectToDB() {
     const db = client.db('news_bias');
     collection = db.collection('clusters');
   }
+  return collection;
 }
 
 // 명시적으로 Content-Type 헤더를 설정
@@ -67,9 +68,11 @@ exports.handler = async function(event, context) {
     console.log('Statistics API 호출됨:', event.httpMethod, event.path, event.queryStringParameters);
     
     let dbConnected = false;
+    let collection = null;
     try {
-      await connectToDB();
+      collection = await connectToDB();
       dbConnected = true;
+      console.log('DB 연결 성공');
     } catch (dbError) {
       console.error('DB 연결 오류:', dbError);
       // DB 연결 오류시 fallbackStats 사용
@@ -89,7 +92,7 @@ exports.handler = async function(event, context) {
 
     let result;
     
-    if (dbConnected) {
+    if (dbConnected && collection) {
       // 날짜 필터링 조건 구성
       const query = {};
       if (event.queryStringParameters) {
@@ -169,16 +172,16 @@ exports.handler = async function(event, context) {
         // 결과 생성 및 반환
         result = {
           total: total.status === 'fulfilled' ? total.value : 0,
-          biasStats: (biasStatsArray.status === 'fulfilled' && biasStatsArray.value[0]) 
+          biasStats: (biasStatsArray.status === 'fulfilled' && biasStatsArray.value && biasStatsArray.value[0]) 
             ? biasStatsArray.value[0] 
             : { left: 0.33, center: 0.34, right: 0.33 },
-          mediaStats: (mediaStatsArray.status === 'fulfilled') 
+          mediaStats: (mediaStatsArray.status === 'fulfilled' && mediaStatsArray.value) 
             ? mediaStatsArray.value.reduce((acc, curr) => {
                 acc[curr._id || '미분류'] = curr.count;
                 return acc;
               }, {})
             : {},
-          categoryStats: (categoryStatsArray.status === 'fulfilled')
+          categoryStats: (categoryStatsArray.status === 'fulfilled' && categoryStatsArray.value)
             ? categoryStatsArray.value.reduce((acc, curr) => {
                 acc[curr._id || '미분류'] = curr.count;
                 return acc;
@@ -186,7 +189,7 @@ exports.handler = async function(event, context) {
             : {},
           filtered: {
             total: filteredTotal.status === 'fulfilled' ? filteredTotal.value : 0,
-            biasStats: (filteredBiasStatsArray.status === 'fulfilled' && filteredBiasStatsArray.value[0])
+            biasStats: (filteredBiasStatsArray.status === 'fulfilled' && filteredBiasStatsArray.value && filteredBiasStatsArray.value[0])
               ? filteredBiasStatsArray.value[0]
               : { left: 0.33, center: 0.34, right: 0.33 }
           }

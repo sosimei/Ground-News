@@ -43,6 +43,16 @@ const addImageUrls = (clusters, isSingleCluster = false) => {
       }
     });
     
+    // 디버그용 로그 추가
+    if (isSingleCluster) {
+      console.log('addImageUrls 단일 클러스터 처리:', 
+        cluster.thumbnail_url ? '메인 이미지 있음' : '메인 이미지 없음',
+        cluster.left?.thumbnail_url ? '좌 이미지 있음' : '좌 이미지 없음',
+        cluster.center?.thumbnail_url ? '중 이미지 있음' : '중 이미지 없음',
+        cluster.right?.thumbnail_url ? '우 이미지 있음' : '우 이미지 없음'
+      );
+    }
+    
     return cluster;
   };
   
@@ -134,6 +144,33 @@ const formatDetailResponse = (cluster) => {
     updated_at: cluster.updated_at || new Date().toISOString(),
     model_ver: cluster.model_ver || ""
   };
+
+  // 썸네일 URL 추가
+  if (cluster.thumbnail_url) {
+    processedResult.thumbnail_url = cluster.thumbnail_url;
+  }
+  
+  // 각 관점별 썸네일 URL 복사
+  if (cluster.left?.thumbnail_url) {
+    processedResult.left.thumbnail_url = cluster.left.thumbnail_url;
+  }
+  if (cluster.center?.thumbnail_url) {
+    processedResult.center.thumbnail_url = cluster.center.thumbnail_url;
+  }
+  if (cluster.right?.thumbnail_url) {
+    processedResult.right.thumbnail_url = cluster.right.thumbnail_url;
+  }
+  
+  // 기사 썸네일 정보 복사
+  if (cluster.left?.article_thumbnails) {
+    processedResult.left.article_thumbnails = cluster.left.article_thumbnails;
+  }
+  if (cluster.center?.article_thumbnails) {
+    processedResult.center.article_thumbnails = cluster.center.article_thumbnails;
+  }
+  if (cluster.right?.article_thumbnails) {
+    processedResult.right.article_thumbnails = cluster.right.article_thumbnails;
+  }
 
   // 모든 기사 ID 통합
   processedResult.article_ids = [

@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
 import apiService from './utils/api';
+import ClusterCard from './components/ClusterCard';
+import ImageLoader from './components/ImageLoader';
 
 function App() {
   const [clusters, setClusters] = useState([]);
@@ -289,6 +291,31 @@ function App() {
 
   // 클러스터 상세 정보
   if (selectedCluster) {
+    // 이미지 ID 가져오기
+    const getMainImageId = () => {
+      // 클러스터 자체 이미지
+      if (selectedCluster.image_file_id) return selectedCluster.image_file_id;
+      
+      // 왼쪽 기사 이미지
+      if (selectedCluster.left && selectedCluster.left.image_file_id) {
+        return selectedCluster.left.image_file_id;
+      }
+      
+      // 중앙 기사 이미지
+      if (selectedCluster.center && selectedCluster.center.image_file_id) {
+        return selectedCluster.center.image_file_id;
+      }
+      
+      // 오른쪽 기사 이미지
+      if (selectedCluster.right && selectedCluster.right.image_file_id) {
+        return selectedCluster.right.image_file_id;
+      }
+      
+      return null;
+    };
+    
+    const mainImageId = getMainImageId();
+    
     return (
       <div className="app-container">
         <header className="app-header">
@@ -306,6 +333,19 @@ function App() {
             <div className="detail-meta">
               <span className="detail-date">{selectedCluster.pub_date || selectedCluster.crawl_date}</span>
             </div>
+            
+            {/* 대표 이미지 표시 */}
+            {mainImageId && (
+              <div style={{ maxWidth: '100%', overflow: 'hidden', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                <ImageLoader 
+                  imageId={mainImageId}
+                  alt={selectedCluster.title}
+                  width="100%"
+                  height={400}
+                  cluster={selectedCluster}
+                />
+              </div>
+            )}
             
             <div className="bias-section">
               <h3>정치 성향 분포</h3>
@@ -390,6 +430,51 @@ function App() {
                 </div>
               </div>
             </div>
+            
+            {/* 관련 이미지 갤러리 */}
+            {(selectedCluster.left?.image_file_id || selectedCluster.center?.image_file_id || selectedCluster.right?.image_file_id) && (
+              <div className="related-images">
+                <h3>관련 이미지</h3>
+                <div className="image-gallery">
+                  {selectedCluster.left?.image_file_id && (
+                    <div className="gallery-item">
+                      <ImageLoader 
+                        imageId={selectedCluster.left.image_file_id}
+                        alt="진보적 관점 기사 이미지"
+                        width="100%"
+                        height="100%"
+                        placeholderText="진보 기사 이미지"
+                      />
+                      <div className="gallery-caption">진보적 관점 기사</div>
+                    </div>
+                  )}
+                  {selectedCluster.center?.image_file_id && (
+                    <div className="gallery-item">
+                      <ImageLoader 
+                        imageId={selectedCluster.center.image_file_id}
+                        alt="중도적 관점 기사 이미지"
+                        width="100%"
+                        height="100%"
+                        placeholderText="중도 기사 이미지"
+                      />
+                      <div className="gallery-caption">중도적 관점 기사</div>
+                    </div>
+                  )}
+                  {selectedCluster.right?.image_file_id && (
+                    <div className="gallery-item">
+                      <ImageLoader 
+                        imageId={selectedCluster.right.image_file_id}
+                        alt="보수적 관점 기사 이미지"
+                        width="100%"
+                        height="100%"
+                        placeholderText="보수 기사 이미지"
+                      />
+                      <div className="gallery-caption">보수적 관점 기사</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -532,35 +617,21 @@ function App() {
         <div className="loading">뉴스를 불러오는 중...</div>
       ) : (
         <>
-          <ul className="cluster-list">
+          <div className="cluster-list">
             {clusters && clusters.length > 0 ? clusters.map(cluster => (
-              <li key={cluster._id} className="cluster-item" onClick={() => viewClusterDetails(cluster)}>
-                <h2 className="cluster-title">{cluster.title}</h2>
-                <div className="cluster-meta">
-                  <span className="cluster-date">{cluster.pub_date || cluster.crawl_date}</span>
-                  {cluster.category && (
-                    <span className="cluster-category">{cluster.category}</span>
-                  )}
-                </div>
-                
-                {/* 정치 성향 분포 그래프 */}
-                {renderBiasGraph(cluster.bias_ratio)}
-                
-                {/* 언론사 태그 */}
-                <div className="press-tags">
-                  {Object.keys(cluster.media_counts || {}).map(press => (
-                    <span key={press} className="press-tag">
-                      {press} ({cluster.media_counts[press]})
-                    </span>
-                  ))}
-                </div>
-              </li>
+              <ClusterCard 
+                key={cluster._id}
+                cluster={cluster}
+                onClick={() => viewClusterDetails(cluster)}
+                showImage={true}
+                imageSize={{ width: 200, height: 150 }}
+              />
             )) : (
               <div className="no-clusters">
                 {isSearching ? '검색 결과가 없습니다.' : '해당 조건에 맞는 뉴스가 없습니다.'}
               </div>
             )}
-          </ul>
+          </div>
           
           {/* 페이지네이션 */}
           {totalPages > 1 && (

@@ -27,7 +27,10 @@ router.get('/:id', async (req, res) => {
       return res.status(404).send('Article not found');
     }
 
-    res.json(article);
+    // 이미지 관련 정보 제거
+    const { image_file_id, ...articleWithoutImage } = article;
+
+    res.json(articleWithoutImage);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Server error');
@@ -83,30 +86,13 @@ router.get('/bycluster/:clusterId', async (req, res) => {
     const articlesCollection = db.collection('news_raw');
     const articles = await articlesCollection.find({ _id: { $in: articleIds } }).toArray();
     
-    // 기사 정보와 함께 이미지 정보 반환
-    const articlesWithImageInfo = await Promise.all(articles.map(async (article) => {
-      if (article.image_file_id) {
-        const filesCollection = db.collection('fs.files');
-        const imageFile = await filesCollection.findOne({ _id: new ObjectId(article.image_file_id) });
-        
-        if (imageFile) {
-          return {
-            ...article,
-            image_info: {
-              _id: imageFile._id,
-              filename: imageFile.filename,
-              contentType: imageFile.contentType,
-              length: imageFile.length,
-              uploadDate: imageFile.uploadDate
-            }
-          };
-        }
-      }
-      
-      return article;
-    }));
+    // 이미지 관련 정보 제거
+    const articlesWithoutImages = articles.map(article => {
+      const { image_file_id, ...articleWithoutImage } = article;
+      return articleWithoutImage;
+    });
     
-    res.json({ articles: articlesWithImageInfo });
+    res.json({ articles: articlesWithoutImages });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Server error');

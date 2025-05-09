@@ -75,7 +75,8 @@
       ],
       "press_list": ["<pressCode>", ...],
       "article_ids": ["<ObjectIdString>", ...],
-      "article_urls": ["<https://…>", ...]
+      "article_urls": ["<https://…>", ...],
+      "thumbnail_url": "/api/images/<ObjectIdString>" // 이미지 URL (추가됨)
     },
     "center": {
       "summary": "<3문장 요약>",
@@ -85,7 +86,8 @@
       ],
       "press_list": ["<pressCode>", ...],
       "article_ids": ["<ObjectIdString>", ...],
-      "article_urls": ["<https://…>", ...]
+      "article_urls": ["<https://…>", ...],
+      "thumbnail_url": "/api/images/<ObjectIdString>" // 이미지 URL (추가됨)
     },
     "right": {
       "summary": "<3문장 요약>",
@@ -95,12 +97,14 @@
       ],
       "press_list": ["<pressCode>", ...],
       "article_ids": ["<ObjectIdString>", ...],
-      "article_urls": ["<https://…>", ...]
+      "article_urls": ["<https://…>", ...],
+      "thumbnail_url": "/api/images/<ObjectIdString>" // 이미지 URL (추가됨)
     },
     "media_counts": { "<pressCode>": <int>, ... },
     "created_at": "<ISO8601 UTC>",
     "updated_at": "<ISO8601 UTC>",
-    "model_ver": "<string>"
+    "model_ver": "<string>",
+    "thumbnail_url": "/api/images/<ObjectIdString>" // 클러스터 대표 이미지 URL (추가됨)
   }
 }
 ```
@@ -182,6 +186,30 @@
 **응답:**
 - 성공 (200): 뉴스 클러스터 상세 정보 (위 '뉴스 상세 응답' 형식)
 - 실패 (404): 뉴스를 찾을 수 없음
+
+### 7. 이미지 가져오기 (추가됨)
+
+**요청:**
+- URL: `/api/images/{id}`
+- Method: `GET`
+- URL Parameters:
+  - `id` (String, Required): 이미지 파일 ID
+
+**응답:**
+- 성공 (200): 이미지 파일 (ContentType: image/jpeg)
+- 실패 (404): 이미지를 찾을 수 없음
+
+### 8. 기사 이미지 가져오기 (추가됨)
+
+**요청:**
+- URL: `/api/images/article/{id}`
+- Method: `GET`
+- URL Parameters:
+  - `id` (String, Required): 기사 ID
+
+**응답:**
+- 성공 (200): 이미지 파일 (ContentType: image/jpeg)
+- 실패 (404): 기사 또는 이미지를 찾을 수 없음
 
 ## 오류 응답
 

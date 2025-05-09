@@ -4,6 +4,7 @@ import apiService from '../../utils/api';
 
 const ClusterList = () => {
   const [clusters, setClusters] = useState([]);
+  const [clusterImages, setClusterImages] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
@@ -41,6 +42,29 @@ const ClusterList = () => {
         
         setClusters(response.data.clusters);
         setPagination(response.data.pagination);
+        
+        // 각 클러스터의 대표 이미지 가져오기
+        const imagesMap = {};
+        
+        // 각 클러스터의 첫 번째 기사의 이미지를 대표 이미지로 사용
+        for (const cluster of response.data.clusters) {
+          try {
+            // 클러스터에 속한 기사 가져오기
+            const articlesResponse = await apiService.articles.getByClusterId(cluster.cluster_id);
+            const clusterArticles = articlesResponse.data.articles || [];
+            
+            // 이미지가 있는 첫 번째 기사 찾기
+            const articleWithImage = clusterArticles.find(article => article.image_file_id);
+            
+            if (articleWithImage && articleWithImage.image_file_id) {
+              imagesMap[cluster._id] = articleWithImage.image_file_id;
+            }
+          } catch (error) {
+            console.error(`클러스터 ${cluster._id}의 이미지 가져오기 오류:`, error);
+          }
+        }
+        
+        setClusterImages(imagesMap);
         setLoading(false);
       } catch (err) {
         console.error('클러스터 목록 가져오기 오류:', err);
@@ -204,6 +228,17 @@ const ClusterList = () => {
                 </h3>
                 <span className="cluster-date">{formatDate(cluster.crawl_date)}</span>
               </div>
+
+              {/* 대표 이미지 표시 */}
+              {clusterImages[cluster._id] && (
+                <div className="cluster-image">
+                  <img 
+                    src={apiService.images.getImageUrl(clusterImages[cluster._id])} 
+                    alt={cluster.title}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                </div>
+              )}
               
               <div className="bias-distribution">
                 <div 

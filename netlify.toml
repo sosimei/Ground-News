@@ -1,12 +1,12 @@
 [build]
   base    = "."
-  publish = "react-app/build"
-  command = "node scripts/prepare-env.js && cd react-app && npm install && npm run build:css && CI=false npm run build"
+  publish = "client/dist"
+  command = "cd client && npm install && npm run build"
 
 [dev]
-  command = "cd react-app && npm start"
+  command = "cd client && npm run dev"
   port    = 3000
-  publish = "react-app/build"
+  publish = "client/dist"
 
 [functions]
   directory    = "netlify/functions"
@@ -14,7 +14,7 @@
   included_files = ["netlify/functions/**/*.js", "netlify/functions/utils/*.js", "netlify/functions/models/*.js"]
 
 [build.environment]
-  SITE_URL     = "https://polireviewer.netlify.app"
+  SITE_URL     = "https://newsbiasinsight.netlify.app"
   NODE_VERSION = "18"
   NODE_ENV     = "production"
   CI           = "false"
@@ -32,7 +32,7 @@
   to     = "/.netlify/functions/:provider"
   status = 200
   force  = true
-  headers = {Access-Control-Allow-Origin="https://polireviewer.netlify.app", Access-Control-Allow-Methods="GET,POST,OPTIONS", Access-Control-Allow-Headers="Content-Type, Authorization, X-CSRF-Token", Access-Control-Allow-Credentials="true"}
+  headers = {Access-Control-Allow-Origin="https://newsbiasinsight.netlify.app", Access-Control-Allow-Methods="GET,POST,OPTIONS", Access-Control-Allow-Headers="Content-Type, Authorization, X-CSRF-Token", Access-Control-Allow-Credentials="true"}
 
 # 3) 나머지 함수들 (/api/...) → 함수 파일명(:splat)으로 매핑
 [[redirects]]
@@ -40,7 +40,7 @@
   to     = "/.netlify/functions/:splat"
   status = 200
   force  = true
-  headers = {Access-Control-Allow-Origin="https://polireviewer.netlify.app", Access-Control-Allow-Methods="GET,POST,OPTIONS", Access-Control-Allow-Headers="Content-Type, Authorization, X-CSRF-Token", Access-Control-Allow-Credentials="true"}
+  headers = {Access-Control-Allow-Origin="https://newsbiasinsight.netlify.app", Access-Control-Allow-Methods="GET,POST,OPTIONS", Access-Control-Allow-Headers="Content-Type, Authorization, X-CSRF-Token", Access-Control-Allow-Credentials="true"}
 
 # 4) SPA 페일백: 나머지 모든 라우트 → index.html
 [[redirects]]

@@ -50,7 +50,22 @@
   to = "/.netlify/functions/statistics"
   status = 200
 
-# 5. additional.js 파일이 처리하는 API 경로들
+# 5. 이미지 API 리디렉션
+[[redirects]]
+  from = "/api/images/:id"
+  to = "/.netlify/functions/images/:id"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/images/article/:id"
+  to = "/.netlify/functions/images/:id"
+  status = 200
+  force = true
+  [redirects.query]
+    article = "true"
+
+# 6. additional.js 파일이 처리하는 API 경로들
 [[redirects]]
   from = "/api/dates"
   to = "/.netlify/functions/additional"
@@ -79,13 +94,13 @@
   [redirects.query]
     path = "trending"
 
-# 6. 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
+# 7. 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-# 7. SPA를 위한 리디렉션
+# 8. SPA를 위한 리디렉션
 [[redirects]]
   from = "/*"
   to = "/index.html"

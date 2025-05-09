@@ -1,107 +1,62 @@
 [build]
-  base    = "."             # ← 프로젝트 루트 디렉토리 사용
-  publish = "client/dist"   # ← client/dist로 경로 수정
-  command = "cd client && npm install && npm run build"  # ← client 디렉토리에서 빌드
+  base    = "."
+  publish = "react-app/build"
+  command = "node scripts/prepare-env.js && cd react-app && npm install && npm run build:css && CI=false npm run build"
+
+[dev]
+  command = "cd react-app && npm start"
+  port    = 3000
+  publish = "react-app/build"
 
 [functions]
-  directory = "netlify/functions"  # ← 상대 경로 수정
+  directory    = "netlify/functions"
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/**/*.js"]
+  # 타임아웃은 Netlify 대시보드에서 직접 설정됩니다 (최소 26초 이상 권장)
 
-# 가장 구체적인 경로부터 배치합니다
-# 1. 특정 ID 패턴 (24자리 16진수)에 대한 리디렉션
+[[functions]]
+  included_files = ["netlify/functions/utils/*.js"]
+  pattern = "debug-auth"
+  
+[[functions]]
+  included_files = ["netlify/functions/utils/*.js", "netlify/functions/models/*.js"]
+  pattern = "refresh-token"
+
+[[functions]]
+  included_files = ["netlify/functions/utils/*.js", "netlify/functions/models/*.js"]
+  pattern = "me"
+
+[build.environment]
+  SITE_URL     = "https://polireviewer.netlify.app"
+  NODE_VERSION = "18"
+  NODE_ENV     = "production"
+  CI           = "false"
+
+# 1) OAuth 콜백 라우팅 - SPA로 처리
 [[redirects]]
-  from = "/clusters/hot/:id(^[0-9a-fA-F]{24}$)"
-  to = "/.netlify/functions/clusters-hot-id/:id"
+  from   = "/auth/callback"
+  to     = "/index.html"
   status = 200
-  force = true
+  force  = true
 
+# 2) 인증용 라우트 (/api/auth/:provider 등) → 해당 provider 함수로 직접 매핑
 [[redirects]]
-  from = "/clusters/latest/:id(^[0-9a-fA-F]{24}$)"
-  to = "/.netlify/functions/clusters-latest-id/:id"
+  from   = "/api/auth/:provider"
+  to     = "/.netlify/functions/:provider"
   status = 200
-  force = true
+  force  = true
+  headers = {Access-Control-Allow-Origin="https://polireviewer.netlify.app", Access-Control-Allow-Methods="GET,POST,OPTIONS", Access-Control-Allow-Headers="Content-Type, Authorization, X-CSRF-Token", Access-Control-Allow-Credentials="true"}
 
-# 2. 카테고리 패턴에 대한 리디렉션
+# 3) 나머지 함수들 (/api/...) → 함수 파일명(:splat)으로 매핑
 [[redirects]]
-  from = "/clusters/hot/:category"
-  to = "/.netlify/functions/clusters-hot-category/:category"
+  from   = "/api/*"
+  to     = "/.netlify/functions/:splat"
   status = 200
-  force = true
+  force  = true
+  headers = {Access-Control-Allow-Origin="https://polireviewer.netlify.app", Access-Control-Allow-Methods="GET,POST,OPTIONS", Access-Control-Allow-Headers="Content-Type, Authorization, X-CSRF-Token", Access-Control-Allow-Credentials="true"}
 
+# 4) SPA 페일백: 나머지 모든 라우트 → index.html
 [[redirects]]
-  from = "/clusters/latest/:category"
-  to = "/.netlify/functions/clusters-latest-category/:category"
-  status = 200
-  force = true
-
-# 3. 기본 API 엔드포인트
-[[redirects]]
-  from = "/clusters/hot"
-  to = "/.netlify/functions/clusters-hot"
-  status = 200
-
-[[redirects]]
-  from = "/clusters/latest"
-  to = "/.netlify/functions/clusters-latest"
-  status = 200
-
-# 4. 통계 API
-[[redirects]]
-  from = "/api/statistics"
-  to = "/.netlify/functions/statistics"
-  status = 200
-
-# 5. 이미지 API 리디렉션
-[[redirects]]
-  from = "/api/images/:id"
-  to = "/.netlify/functions/images/:id"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/images/article/:id"
-  to = "/.netlify/functions/images/:id"
-  status = 200
-  force = true
-  [redirects.query]
-    article = "true"
-
-# 6. additional.js 파일이 처리하는 API 경로들
-[[redirects]]
-  from = "/api/dates"
-  to = "/.netlify/functions/additional"
-  status = 200
-  [redirects.query]
-    path = "dates"
-
-[[redirects]]
-  from = "/api/categories"
-  to = "/.netlify/functions/additional"
-  status = 200
-  [redirects.query]
-    path = "categories"
-
-[[redirects]]
-  from = "/api/search"
-  to = "/.netlify/functions/additional"
-  status = 200
-  [redirects.query]
-    path = "search"
-
-[[redirects]]
-  from = "/api/trending"
-  to = "/.netlify/functions/additional"
-  status = 200
-  [redirects.query]
-    path = "trending"
-
-# 7. 일반적인 API 리디렉션 (다른 경로에 대한 폴백)
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# 8. SPA를 위한 리디렉션
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from   = "/*"
+  to     = "/index.html"
   status = 200

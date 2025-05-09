@@ -10,6 +10,13 @@ const api = axios.create({
   timeout: 10000 // 10초 타임아웃
 });
 
+// 이미지 API 설정 (ResponseType을 arraybuffer로)
+const imageApi = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://newsbiasinsight.netlify.app/api',
+  responseType: 'arraybuffer',
+  timeout: 10000 // 10초 타임아웃
+});
+
 // API 에러 처리 헬퍼 함수
 const handleApiError = (error) => {
   console.error('API 에러:', error);
@@ -197,6 +204,32 @@ const clusters = {
         } 
       }
     );
+  },
+  
+  // 카테고리별 인기 클러스터 조회
+  getHotByCategory: async (category, params = {}) => {
+    if (!category) {
+      return { success: false, error: true, message: '카테고리가 필요합니다.' };
+    }
+    
+    const defaultParams = {
+      page: 1,
+      limit: 5
+    };
+    const queryParams = { ...defaultParams, ...params };
+    
+    return await apiWrapper(
+      () => api.get(`/clusters/hot/category/${category}`, { params: queryParams }),
+      { 
+        clusters: mockData.hotClusters.filter(c => c.category === category),
+        pagination: { 
+          total: mockData.hotClusters.filter(c => c.category === category).length, 
+          page: queryParams.page, 
+          limit: queryParams.limit, 
+          totalPages: Math.ceil(mockData.hotClusters.filter(c => c.category === category).length / queryParams.limit) 
+        } 
+      }
+    );
   }
 };
 
@@ -277,6 +310,54 @@ const statistics = {
   }
 };
 
+// 이미지 관련 API
+const images = {
+  // 이미지 파일 가져오기 (GridFS에서)
+  getImageById: async (imageId) => {
+    if (!imageId) {
+      return { success: false, error: true, message: '이미지 ID가 필요합니다.' };
+    }
+    
+    try {
+      const response = await imageApi.get(`/images/${imageId}`);
+      const contentType = response.headers['content-type'] || 'image/jpeg';
+      const blob = new Blob([response.data], { type: contentType });
+      const imageUrl = URL.createObjectURL(blob);
+      
+      return { success: true, data: { url: imageUrl, blob, contentType } };
+    } catch (error) {
+      const errorResult = handleApiError(error);
+      
+      // 에러 발생 시 대체 이미지 URL 반환
+      return { 
+        success: false, 
+        ...errorResult,
+        data: { 
+          url: null
+        } 
+      };
+    }
+  },
+  
+  // 파일 메타데이터 조회
+  getFileMetadata: async (fileId) => {
+    if (!fileId) {
+      return { success: false, error: true, message: '파일 ID가 필요합니다.' };
+    }
+    
+    return await apiWrapper(
+      () => api.get(`/files/${fileId}/metadata`),
+      { 
+        fileId, 
+        filename: `mock_file_${fileId}.jpg`, 
+        contentType: 'image/jpeg',
+        length: 100000,
+        uploadDate: new Date().toISOString()
+      }
+    );
+  }
+};
+
 // API 인터셉터 설정
 api.interceptors.request.use(
   (config) => {
@@ -304,10 +385,34 @@ api.interceptors.response.use(
   }
 );
 
+// 이미지 API 인터셉터
+imageApi.interceptors.request.use(
+  (config) => {
+    console.log(`이미지 API 요청: ${config.method.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('이미지 API 요청 에러:', error);
+    return Promise.reject(error);
+  }
+);
+
+imageApi.interceptors.response.use(
+  (response) => {
+    console.log(`이미지 API 응답 성공: ${response.config.method.toUpperCase()} ${response.config.url}`);
+    return response;
+  },
+  (error) => {
+    console.error('이미지 API 응답 에러:', error);
+    return Promise.reject(error);
+  }
+);
+
 // API 서비스 객체
 const apiService = {
   clusters,
-  statistics
+  statistics,
+  images
 };
 
 export default apiService;

@@ -30,12 +30,10 @@ exports.handler = async function(event, context) {
       const connection = await client.connect(process.env.MONGODB_URI);
       const db = connection.db('news_bias');
 
-      // GridFS 버킷 생성
-      const bucket = new GridFSBucket(db, {
-        bucketName: isArticleImage ? 'article_images' : 'thumbnails' 
-      });
+      // 추가 디버깅 로그
+      const collections = await db.listCollections().toArray();
+      console.log('사용 가능한 컬렉션:', collections.map(c => c.name).join(', '));
 
-      // 이미지 파일을 찾고 스트림 생성
       let objectId;
       try {
         objectId = new ObjectId(imageId);
@@ -46,11 +44,45 @@ exports.handler = async function(event, context) {
         };
       }
 
-      // 이미지 메타데이터 조회
-      const files = db.collection(isArticleImage ? 'article_images.files' : 'thumbnails.files');
-      const fileInfo = await files.findOne({ _id: objectId });
+      // 기사 ID인 경우 해당 기사의 image_file_id를 가져옴
+      if (isArticleImage) {
+        const articlesCollection = db.collection('news_raw');
+        const article = await articlesCollection.findOne({ _id: objectId });
+        
+        if (article && article.image_file_id) {
+          objectId = article.image_file_id instanceof ObjectId ? 
+                     article.image_file_id : 
+                     new ObjectId(article.image_file_id);
+          console.log('기사에서 이미지 ID 검색:', objectId);
+        } else {
+          console.log('기사에 이미지 ID가 없음:', objectId);
+          return {
+            statusCode: 404,
+            body: JSON.stringify({ error: '해당 기사에 이미지가 없습니다' })
+          };
+        }
+      }
 
-      if (!fileInfo) {
+      // GridFS 버킷 이름 찾기 (fs, fs.files, thumbnails 등 가능성 있음)
+      const bucketNames = ['fs', 'thumbnails', 'images', 'article_images'];
+      let fileInfo = null;
+      let usedBucket = null;
+
+      for (const bucketName of bucketNames) {
+        const filesCollection = db.collection(`${bucketName}.files`);
+        if (!filesCollection) continue;
+        
+        const tempFileInfo = await filesCollection.findOne({ _id: objectId });
+        if (tempFileInfo) {
+          fileInfo = tempFileInfo;
+          usedBucket = bucketName;
+          console.log(`이미지 찾음: ${bucketName}.files 컬렉션에서`);
+          break;
+        }
+      }
+
+      if (!fileInfo || !usedBucket) {
+        console.log('모든 버킷에서 이미지를 찾을 수 없음:', objectId);
         return {
           statusCode: 404,
           body: JSON.stringify({ error: '이미지를 찾을 수 없습니다' })
@@ -58,10 +90,10 @@ exports.handler = async function(event, context) {
       }
 
       // 이미지 데이터 조회
-      const chunks = db.collection(isArticleImage ? 'article_images.chunks' : 'thumbnails.chunks');
-      const data = await chunks.find({ files_id: objectId }).sort({ n: 1 }).toArray();
+      const chunksCollection = db.collection(`${usedBucket}.chunks`);
+      const chunks = await chunksCollection.find({ files_id: objectId }).sort({ n: 1 }).toArray();
 
-      if (!data || data.length === 0) {
+      if (!chunks || chunks.length === 0) {
         return {
           statusCode: 404,
           body: JSON.stringify({ error: '이미지 데이터를 찾을 수 없습니다' })
@@ -70,12 +102,26 @@ exports.handler = async function(event, context) {
 
       // 이미지 데이터 조합
       let imageData = Buffer.alloc(0);
-      for (const chunk of data) {
-        imageData = Buffer.concat([imageData, chunk.data.buffer]);
+      for (const chunk of chunks) {
+        // MongoDB에서 반환된 Binary 객체 처리
+        const chunkData = chunk.data && chunk.data.buffer ? 
+                          chunk.data.buffer : 
+                          chunk.data;
+        imageData = Buffer.concat([imageData, chunkData]);
       }
 
-      // 이미지 타입 결정
+      // 이미지 타입 결정 (기본값은 jpeg)
       let contentType = fileInfo.contentType || 'image/jpeg';
+      
+      // 이미지가 없는 경우 디폴트 이미지 제공
+      if (imageData.length === 0) {
+        return {
+          statusCode: 302,
+          headers: {
+            'Location': 'https://placehold.co/600x400?text=No+Image'
+          }
+        };
+      }
 
       // 응답 반환
       return {

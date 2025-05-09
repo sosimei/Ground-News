@@ -40,8 +40,25 @@ exports.handler = async function(event, context) {
       return respond(404, formatErrorResponse('News not found', 'ERROR404'));
     }
 
+    console.log('클러스터 기본 정보:');
+    console.log('- 제목:', cluster.title);
+    console.log('- 이미지 ID 존재 여부:', cluster.image_file_id ? '있음' : '없음');
+    
+    // 정치적 관점별 기사 ID 로깅
+    console.log('- 좌파 기사 수:', (cluster.left?.left_article_ids || []).length);
+    console.log('- 중도 기사 수:', (cluster.center?.center_article_ids || []).length);
+    console.log('- 우파 기사 수:', (cluster.right?.right_article_ids || []).length);
+
     // 이미지 URL 추가
-    const processedCluster = addImageUrls(cluster, true);
+    console.log('이미지 URL 추가 시작...');
+    const processedCluster = await addImageUrls(cluster, true);
+
+    // 로깅 추가
+    console.log('이미지 URL 추가 후:');
+    console.log('- 메인 이미지:', processedCluster.thumbnail_url || '없음');
+    console.log('- 좌파 이미지:', processedCluster.left?.thumbnail_url || '없음');
+    console.log('- 중도 이미지:', processedCluster.center?.thumbnail_url || '없음');
+    console.log('- 우파 이미지:', processedCluster.right?.thumbnail_url || '없음');
 
     // 응답
     const response = formatDetailResponse(processedCluster);

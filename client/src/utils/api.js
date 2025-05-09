@@ -74,7 +74,7 @@ const apiWrapper = async (apiCall, mockResult, useCache = false, cacheKey = null
 // 클러스터 관련 API
 const clusters = {
   // 클러스터 목록 조회
-  getList: async (params = {}) => {
+  getAll: async (params = {}) => {
     const defaultParams = {
       page: 1,
       limit: 10
@@ -277,6 +277,43 @@ const statistics = {
   }
 };
 
+// 기사 관련 API
+const articles = {
+  // 기사 상세 정보 조회
+  getById: async (articleId) => {
+    if (!articleId) {
+      return { success: false, error: true, message: '기사 ID가 필요합니다.' };
+    }
+    
+    return await apiWrapper(
+      () => api.get(`/articles/${articleId}`),
+      mockData.getArticleDetail(articleId)
+    );
+  },
+  
+  // 클러스터에 속한 기사 목록 조회
+  getByClusterId: async (clusterId) => {
+    if (!clusterId) {
+      return { success: false, error: true, message: '클러스터 ID가 필요합니다.' };
+    }
+    
+    return await apiWrapper(
+      () => api.get(`/articles/bycluster/${clusterId}`),
+      { articles: mockData.articles }
+    );
+  }
+};
+
+// 이미지 관련 API
+const images = {
+  // 이미지 URL 가져오기
+  getImageUrl: (imageId) => {
+    if (!imageId) return null;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://newsbiasinsight.netlify.app/api';
+    return `${baseUrl}/images/${imageId}`;
+  }
+};
+
 // API 인터셉터 설정
 api.interceptors.request.use(
   (config) => {
@@ -307,7 +344,9 @@ api.interceptors.response.use(
 // API 서비스 객체
 const apiService = {
   clusters,
-  statistics
+  statistics,
+  articles,
+  images
 };
 
 export default apiService;

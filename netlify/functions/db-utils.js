@@ -178,24 +178,48 @@ const getPaginationData = (event, defaultLimit = 10) => {
 
 // API 응답 형식화 함수 (목록)
 const formatListResponse = (clusters, pagination) => {
-  return {
+  // 클러스터가 배열인지 확인
+  if (!Array.isArray(clusters)) {
+    console.error('formatListResponse: clusters가 배열이 아님:', typeof clusters);
+    clusters = [];
+  }
+  
+  // pagination 객체가 유효한지 확인
+  if (!pagination || typeof pagination !== 'object') {
+    console.error('formatListResponse: pagination이 유효하지 않음:', pagination);
+    pagination = { page: 1, limit: 10, total: 0 };
+  }
+  
+  // 누락된 페이지네이션 필드 채우기
+  const { page = 1, limit = 10, total = 0 } = pagination;
+  const pages = Math.ceil(total / limit) || 1;
+  
+  // 응답 구조 생성 및 디버깅 로그
+  const response = {
     isSuccess: true,
     code: "COMMON200",
     message: "성공!",
     result: {
       clusters,
-      pagination: {
-        total: pagination.total,
-        page: pagination.page,
-        limit: pagination.limit,
-        pages: Math.ceil(pagination.total / pagination.limit)
-      }
+      pagination: { total, page, limit, pages }
     }
   };
+  
+  console.log('formatListResponse 결과:', 
+              'clusters 수:', clusters.length, 
+              'pagination:', response.result.pagination);
+  
+  return response;
 };
 
 // API 응답 형식화 함수 (상세) - DetailResponse 형식에 맞게 수정
 const formatDetailResponse = (cluster) => {
+  // 클러스터 객체가 유효한지 확인
+  if (!cluster || typeof cluster !== 'object') {
+    console.error('formatDetailResponse: cluster가 유효하지 않음:', cluster);
+    cluster = {};
+  }
+  
   // 각 정치적 관점별 데이터 처리
   const processedResult = {
     title: cluster.title || "",
@@ -271,6 +295,10 @@ const formatDetailResponse = (cluster) => {
     ...(processedResult.right.article_urls || [])
   ];
 
+  console.log('formatDetailResponse 결과:', 
+              '제목:', processedResult.title,
+              '썸네일 유무:', processedResult.thumbnail_url ? '있음' : '없음');
+              
   return {
     isSuccess: true,
     code: 200,

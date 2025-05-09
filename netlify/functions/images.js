@@ -30,10 +30,6 @@ exports.handler = async function(event, context) {
       const connection = await client.connect(process.env.MONGODB_URI);
       const db = connection.db('news_bias');
 
-      // 추가 디버깅 로그
-      const collections = await db.listCollections().toArray();
-      console.log('사용 가능한 컬렉션:', collections.map(c => c.name).join(', '));
-
       let objectId;
       try {
         objectId = new ObjectId(imageId);
@@ -63,34 +59,26 @@ exports.handler = async function(event, context) {
         }
       }
 
-      // GridFS 버킷 이름 찾기 (fs, fs.files, thumbnails 등 가능성 있음)
-      const bucketNames = ['fs', 'thumbnails', 'images', 'article_images'];
-      let fileInfo = null;
-      let usedBucket = null;
-
-      for (const bucketName of bucketNames) {
-        const filesCollection = db.collection(`${bucketName}.files`);
-        if (!filesCollection) continue;
-        
-        const tempFileInfo = await filesCollection.findOne({ _id: objectId });
-        if (tempFileInfo) {
-          fileInfo = tempFileInfo;
-          usedBucket = bucketName;
-          console.log(`이미지 찾음: ${bucketName}.files 컬렉션에서`);
-          break;
-        }
-      }
-
-      if (!fileInfo || !usedBucket) {
-        console.log('모든 버킷에서 이미지를 찾을 수 없음:', objectId);
+      // GridFS에서 이미지 가져오기 (주로 fs 컬렉션 사용)
+      const bucket = new GridFSBucket(db, { bucketName: 'fs' });
+      
+      // fs.files에서 파일 정보 조회
+      const filesCollection = db.collection('fs.files');
+      const fileInfo = await filesCollection.findOne({ _id: objectId });
+      
+      if (!fileInfo) {
+        console.log('이미지 파일 정보를 찾을 수 없음:', objectId);
+        // 이미지가 없는 경우 기본 이미지로 리다이렉트
         return {
-          statusCode: 404,
-          body: JSON.stringify({ error: '이미지를 찾을 수 없습니다' })
+          statusCode: 302,
+          headers: {
+            'Location': 'https://placehold.co/600x400?text=No+Image'
+          }
         };
       }
 
-      // 이미지 데이터 조회
-      const chunksCollection = db.collection(`${usedBucket}.chunks`);
+      // 이미지 데이터를 청크에서 읽기
+      const chunksCollection = db.collection('fs.chunks');
       const chunks = await chunksCollection.find({ files_id: objectId }).sort({ n: 1 }).toArray();
 
       if (!chunks || chunks.length === 0) {
@@ -110,7 +98,7 @@ exports.handler = async function(event, context) {
         imageData = Buffer.concat([imageData, chunkData]);
       }
 
-      // 이미지 타입 결정 (기본값은 jpeg)
+      // 이미지 타입 결정
       let contentType = fileInfo.contentType || 'image/jpeg';
       
       // 이미지가 없는 경우 디폴트 이미지 제공
@@ -134,6 +122,7 @@ exports.handler = async function(event, context) {
         body: imageData.toString('base64'),
         isBase64Encoded: true
       };
+
     } catch (dbError) {
       console.error('DB 연결 또는 이미지 가져오기 오류:', dbError);
       return {

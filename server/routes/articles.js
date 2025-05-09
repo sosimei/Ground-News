@@ -27,10 +27,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).send('Article not found');
     }
 
-    // 이미지 관련 정보 제거
-    const { image_file_id, ...articleWithoutImage } = article;
-
-    res.json(articleWithoutImage);
+    res.json(article);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Server error');
@@ -86,13 +83,7 @@ router.get('/bycluster/:clusterId', async (req, res) => {
     const articlesCollection = db.collection('news_raw');
     const articles = await articlesCollection.find({ _id: { $in: articleIds } }).toArray();
     
-    // 이미지 관련 정보 제거
-    const articlesWithoutImages = articles.map(article => {
-      const { image_file_id, ...articleWithoutImage } = article;
-      return articleWithoutImage;
-    });
-    
-    res.json({ articles: articlesWithoutImages });
+    res.json({ articles });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Server error');
